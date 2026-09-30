@@ -1,0 +1,8 @@
+{
+  "name": "plexus",
+  "owner": { "name": "plexus" },
+  "metadata": { "description": "Маркетплейс Плексуса" },
+  "plugins": [
+    { "name": "plexus", "source": "./", "description": "Плексус: круг, работники, база знаний проекта" }
+  ]
+}

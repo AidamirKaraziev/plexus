@@ -1,0 +1,11 @@
+{
+  "extraKnownMarketplaces": {
+    "plexus": {
+      "source": { "source": "github", "repo": "AidamirKaraziev/plexus" },
+      "autoUpdate": true
+    }
+  },
+  "enabledPlugins": {
+    "plexus@plexus": true
+  }
+}

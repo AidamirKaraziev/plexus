@@ -1,0 +1,22 @@
+#!/bin/sh
+# Git-хук учёта: после коммита дописывает хвост в ledger через плагин plexus.
+# Плагин ищем в реестре установленных плагинов Claude Code; нет плагина
+# или в нём нет lib/ledger_commit.py — молча выходим, коммит не ломаем.
+reg="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/installed_plugins.json"
+[ -f "$reg" ] || exit 0
+plugin=$(python3 - "$reg" <<'PY' 2>/dev/null
+import json, sys
+try:
+    data = json.load(open(sys.argv[1]))
+    for key, items in data.get("plugins", {}).items():
+        if key.split("@")[0] == "plexus" and items:
+            print(items[0]["installPath"])
+            break
+except Exception:
+    pass
+PY
+)
+script="$plugin/lib/ledger_commit.py"
+[ -n "$plugin" ] && [ -f "$script" ] || exit 0
+python3 "$script" "$(git rev-parse --short HEAD)"
+exit 0
