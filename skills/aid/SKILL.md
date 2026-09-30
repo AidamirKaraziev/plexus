@@ -1,16 +1,20 @@
 ---
 name: aid
 description: Cheat sheet for the user's own skills — what each command does, when to call it and in what order. Use when the user invokes /plexus:aid, or says «какие у меня команды», «что делает каждый скилл», «напомни список команд», «шпаргалка по скиллам», "list my commands", "what skills do I have".
-version: 1.6.0
+version: 1.7.0
 ---
 
 # Cheat sheet for my own commands
 
-Print the block below **verbatim** and stop. No tool calls, no files read, no
-line of prose before or after it — one message, one screen. Any turn spent on a
-tool costs more than the screen itself.
+Read the version from `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json` (field
+`version`) — one read, the only tool call allowed. Then print the block below
+**verbatim**, with «Плексус <версия>» as its first line, and stop. No other
+files, no line of prose before or after it — one message, one screen. The
+version is never written in this text: it is always read from `plugin.json`.
 
 ```
+Плексус <версия>
+
 МОИ КОМАНДЫ
 
 ХОД РАБОТЫ   /plexus:start → работа делают работники → /plexus:close → коммит руками
@@ -54,6 +58,6 @@ what it deliberately does not do. No advice afterwards.
 ## Never
 
 - Never edit a skill, the plan, the ledger or the vault; this screen is read-only.
-- Never run a command to build the screen — it is already written above.
+- Never run a command to build the screen — it is already written above; the only read is the version in `plugin.json`.
 - Never list built-in or plugin skills; these are the user's own commands only.
 - Do not offer to run any of the listed commands. The user reads and picks.
