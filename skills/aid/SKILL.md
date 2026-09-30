@@ -42,6 +42,7 @@ The version is never written in this text: it is always read from `plugin.json`.
           /plexus:map     карта базы: какие папки, что куда, сколько заметок
 
 НАСТРОЙКА /plexus:aid-project-init  завести проект: база знаний, план, ledger, хук
+          /plexus:update            обновить Плексус до последней версии, потом перезапуск Claude
           /plexus:aid               этот экран
 
 ЧАСТОТА   каждую сессию: start, close, коммит руками
