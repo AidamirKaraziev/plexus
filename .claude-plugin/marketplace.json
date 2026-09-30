@@ -1,5 +1,5 @@
 {
-  "name": "plexus",
+  "name": "plexus-beta",
   "owner": { "name": "plexus" },
   "metadata": { "description": "Маркетплейс Плексуса" },
   "plugins": [
