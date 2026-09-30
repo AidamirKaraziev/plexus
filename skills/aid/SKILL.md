@@ -1,19 +1,22 @@
 ---
 name: aid
 description: Cheat sheet for the user's own skills — what each command does, when to call it and in what order. Use when the user invokes /plexus:aid, or says «какие у меня команды», «что делает каждый скилл», «напомни список команд», «шпаргалка по скиллам», "list my commands", "what skills do I have".
-version: 1.7.0
+version: 1.8.0
 ---
 
 # Cheat sheet for my own commands
 
 Read the version from `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json` (field
-`version`) — one read, the only tool call allowed. Then print the block below
-**verbatim**, with «Плексус <версия>» as its first line, and stop. No other
-files, no line of prose before or after it — one message, one screen. The
-version is never written in this text: it is always read from `plugin.json`.
+`version`) — one read, the only tool call allowed. The source comes from the
+`${CLAUDE_PLUGIN_ROOT}` path itself, no tool call: path contains
+`/plugins/cache/plexus-beta/` → «бета»; `/plugins/cache/plexus/` → «релиз»;
+any other path (no `plugins/cache`) → «черновик». Then print the block below
+**verbatim**, with «Плексус <версия> · <источник>» as its first line, and stop.
+No other files, no line of prose before or after it — one message, one screen.
+The version is never written in this text: it is always read from `plugin.json`.
 
 ```
-Плексус <версия>
+Плексус <версия> · <источник>
 
 МОИ КОМАНДЫ
 
@@ -39,6 +42,7 @@ version is never written in this text: it is always read from `plugin.json`.
           /plexus:map     карта базы: какие папки, что куда, сколько заметок
 
 НАСТРОЙКА /plexus:aid-project-init  завести проект: база знаний, план, ledger, хук
+          /plexus:update            обновить Плексус до последней версии, потом перезапуск Claude
           /plexus:aid               этот экран
 
 ЧАСТОТА   каждую сессию: start, close, коммит руками
