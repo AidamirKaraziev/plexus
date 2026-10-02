@@ -14,7 +14,16 @@
 
 ## Подключить в проект
 
-Чтобы у всей команды Плексус появлялся сам, положите в `.claude/settings.json` репозитория (готовый файл — `templates/settings.json`):
+Запись в `.claude/settings.json` репозитория (готовый файл — `templates/settings.json`) плагин **не скачивает**: `enabledPlugins` только включает его для тех, у кого он уже стоит. Каждый участник ставит Плексус один раз сам, из папки проекта:
+
+```
+claude plugin marketplace add AidamirKaraziev/plexus
+claude plugin install plexus@plexus --scope project
+```
+
+Поставьте одну область, иначе в `claude plugin list` будет две записи (user и project), и обновлять придётся каждую. Для команды — `--scope project`.
+
+Запись в проекте нужна, чтобы плагин был включён у всех и работал `autoUpdate`:
 
 ```json
 {
@@ -24,25 +33,24 @@
       "autoUpdate": true
     }
   },
-  "enabledPlugins": {
-    "plexus@plexus": true
-  }
+  "enabledPlugins": { "plexus@plexus": true }
 }
 ```
 
-Закоммитьте файл. При следующем запуске в этой папке Claude Code спросит доверие к папке, зарегистрирует маркетплейс и включит плагин.
+Закоммитьте файл. Команда `claude plugin` этот файл не читает: сама она плагин по записи не поставит.
 
 ## Как приходят обновления
 
-С `autoUpdate: true` Claude Code сам подтягивает новую версию в фоне при запуске; новая версия подхватывается, когда в плагине меняется `version`.
+`autoUpdate: true` обновляет только уже **установленный** плагин, только в интерактивной сессии (после первого сообщения, с задержкой до 10 минут). Сессия остаётся на старой версии: появится подсказка `Plugin updated`, новая версия — после `/reload-plugins` или перезапуска. `claude -p` и команды `claude plugin` фоновое обновление не запускают.
 
-Если автообновление не сработало (в документации поле описано для управляемых настроек, для проектных не подтверждено), обновитесь вручную:
+Нужна версия сейчас — руками:
 
 ```
-/plugin marketplace update plexus
+claude plugin marketplace update plexus
+claude plugin update plexus@plexus --scope project
 ```
 
-Либо включите **Enable auto-update** в `/plugin` → Marketplaces → plexus. Изменения смотрите в `CHANGELOG.md`.
+Первая команда обновляет только список, вторая — плагин. Если «already at the latest version» — новой версии ещё не выпущено: новые коммиты без поднятого `version` обновлением не считаются. Изменения — в `CHANGELOG.md`.
 
 ## Лицензия
 
