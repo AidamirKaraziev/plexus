@@ -6,6 +6,8 @@ version: 1.4.0
 
 # The plan: epics and stages
 
+Корень Плексуса — `${CLAUDE_PLUGIN_ROOT}`; в Codex эта строка не раскрывается — бери путь из строки контекста «корень Плексуса: …», а если её нет — папку на два уровня выше этого SKILL.md.
+
 The plan files are the single source of truth about what is left to do. By
 default this skill reads neither the project code nor the knowledge vault.
 
@@ -43,7 +45,7 @@ approved or copied (stages, plan lines) goes out as a block, not as a retelling.
 
 ## Modes
 
-The mode comes from the argument. No argument — ask with `AskUserQuestion`, one
+The mode comes from the argument. No argument — ask with `AskUserQuestion` (в Codex — `request_user_input`; недоступен — один вопрос текстом с вариантами), one
 question, and read nothing until the answer arrives.
 
 | Call | What it does |

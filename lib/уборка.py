@@ -2,8 +2,9 @@
 """Снести дорожки и ветки работников закрытого круга. Невлитое не трогает.
 
 Дорожку работника заводит встроенный `isolation: "worktree"` Claude Code:
-каталог `.claude/worktrees/<имя>`, ветка `claude/<имя>`. Убирать их некому —
-этим и занят этот скрипт.
+каталог `.claude/worktrees/<имя>`, ветка `claude/<имя>`. В Codex дорожку заводит
+`lib/дорожка.py`: `.codex/worktrees/<имя>`, ветка `codex/<имя>`. Убирать их некому —
+этим и занят этот скрипт (опознаёт оба префикса).
 
 Сносится только то, что влито в main и не имеет несохранённых правок.
 Всё остальное остаётся и печатается с причиной.
@@ -63,10 +64,11 @@ def ветки_без_дорожек(root: Path, префикс: str, занят
 def main() -> int:
     ap = argparse.ArgumentParser(add_help=True)
     ap.add_argument("--сухой-прогон", action="store_true", help="только показать, ничего не трогать")
-    ap.add_argument("--префикс", default="claude/", help="префикс веток работников")
+    ap.add_argument("--префикс", action="append", help="префикс веток работников (по умолчанию claude/ и codex/)")
     ap.add_argument("--репозиторий", default=".")
     a = ap.parse_args()
     сухой = getattr(a, "сухой_прогон")
+    префиксы = tuple(a.префикс or ["claude/", "codex/"])
 
     root = main_root(Path(a.репозиторий).resolve())
     снёс, оставил = [], []
@@ -75,7 +77,7 @@ def main() -> int:
     for д in дорожки(root):
         ветка = д.get("ветка", "")
         занятые.add(ветка)
-        если_чужая = not ветка.startswith(a.префикс)
+        если_чужая = not ветка.startswith(префиксы)
         if если_чужая:
             оставил.append(f"{д['путь'].name} · {ветка or 'без ветки'} — не дорожка работника")
             continue
@@ -90,7 +92,7 @@ def main() -> int:
             git("branch", "-d", ветка, cwd=root)
         снёс.append(f"{д['путь'].name} · {ветка}")
 
-    for ветка in ветки_без_дорожек(root, a.префикс, занятые):
+    for ветка in [b for п in префиксы for b in ветки_без_дорожек(root, п, занятые)]:
         if not влита(ветка, root):
             оставил.append(f"— · {ветка} — не влита в main")
             continue

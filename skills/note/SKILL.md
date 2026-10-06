@@ -6,6 +6,8 @@ version: 2.0.0
 
 # One note into the knowledge base
 
+Корень Плексуса — `${CLAUDE_PLUGIN_ROOT}`; в Codex эта строка не раскрывается — бери путь из строки контекста «корень Плексуса: …», а если её нет — папку на два уровня выше этого SKILL.md.
+
 The cheap way to record knowledge: **one file, one line in `проект.md`**.
 Nothing else is touched — not the plan, not the archive.
 
