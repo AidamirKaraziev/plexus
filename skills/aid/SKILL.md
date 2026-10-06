@@ -6,6 +6,8 @@ version: 1.8.0
 
 # Cheat sheet for my own commands
 
+Корень Плексуса — `${CLAUDE_PLUGIN_ROOT}`; в Codex эта строка не раскрывается — бери путь из строки контекста «корень Плексуса: …», а если её нет — папку на два уровня выше этого SKILL.md.
+
 Read the version from `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json` (field
 `version`) — one read, the only tool call allowed. The source comes from the
 `${CLAUDE_PLUGIN_ROOT}` path itself, no tool call: path contains

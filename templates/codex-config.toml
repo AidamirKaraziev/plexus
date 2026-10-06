@@ -1,0 +1,5 @@
+# Проектный конфиг Codex: положить в <проект>/.codex/config.toml.
+# Работает только в доверенном проекте (см. раздел «Codex» в README).
+[features]
+# Вопросы с вариантами в режиме Default (флаг экспериментальный)
+default_mode_request_user_input = true

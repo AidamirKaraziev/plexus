@@ -6,6 +6,8 @@ version: 1.2.0
 
 # Заводим проект
 
+Корень Плексуса — `${CLAUDE_PLUGIN_ROOT}`; в Codex эта строка не раскрывается — бери путь из строки контекста «корень Плексуса: …», а если её нет — папку на два уровня выше этого SKILL.md.
+
 A one-off operation and the entry point to every other skill. Without it
 `/plexus:note` finds no vault and stop; `/plexus:roadmap` and `/plexus:status` find
 no roadmap. This skill creates both halves at once.
@@ -51,7 +53,7 @@ head -20 CLAUDE.md 2>/dev/null
 
 ### 2. Экран первый: контекст
 
-Один вызов `AskUserQuestion`, три вопроса. Варианты ответов формулировать под
+Один вызов `AskUserQuestion` (в Codex — `request_user_input`; недоступен — один вопрос текстом с вариантами), три вопроса. Варианты ответов формулировать под
 то, что видно в репозитории.
 
 1. Что за продукт и для кого — одной фразой.

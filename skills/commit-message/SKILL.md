@@ -6,6 +6,8 @@ version: 2.1.0
 
 # Commit message
 
+Корень Плексуса — `${CLAUDE_PLUGIN_ROOT}`; в Codex эта строка не раскрывается — бери путь из строки контекста «корень Плексуса: …», а если её нет — папку на два уровня выше этого SKILL.md.
+
 The job: look at what changed and produce the **finished text** of a commit
 message. **Never run `git add`, `git commit` or `git push`** — what enters
 history, and when, is the user's decision. They copy the text by hand and commit

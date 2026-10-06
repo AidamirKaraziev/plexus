@@ -6,6 +6,8 @@ version: 1.4.0
 
 # Project status
 
+Корень Плексуса — `${CLAUDE_PLUGIN_ROOT}`; в Codex эта строка не раскрывается — бери путь из строки контекста «корень Плексуса: …», а если её нет — папку на два уровня выше этого SKILL.md.
+
 Budget for one call: **no more than 4k tokens**. That holds because the numbers
 are computed by scripts and the model only lays them out on screen. No file
 outside the list below is opened.

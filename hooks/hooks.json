@@ -7,6 +7,11 @@
             "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/lib/свежая_версия.py\" --hook",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/lib/корень.py\"",
+            "timeout": 5
           }
         ]
       }

@@ -12,6 +12,31 @@
 
 затем `/plugin install plexus@plexus`. Вход в работу — `/plexus:start`, шпаргалка — `/plexus:aid`.
 
+## Codex
+
+Тот же плагин работает и в Codex CLI (проверено на 0.160.1).
+
+Поставить, из терминала:
+
+```
+codex plugin marketplace add AidamirKaraziev/plexus
+codex plugin add plexus@plexus
+```
+
+Вход — `$plexus:start` (в Codex скиллы вызываются через `$`, не `/`). Хук `SessionStart` без доверия не запускается: в сессии Codex откройте `/hooks` и доверьте его.
+
+Включить в проекте: скопируйте `templates/codex-config.toml` в `.codex/config.toml` репозитория. Файл включает флаг `default_mode_request_user_input` (вопросы с вариантами). Он читается только из **доверенного** проекта: без доверия Codex молча игнорирует проектный конфиг. Не хотите конфиг в репозитории — та же строка `default_mode_request_user_input = true` в `[features]` файла `~/.codex/config.toml`.
+
+Работники создают дорожки командой `git worktree add`; из песочницы Codex она может потребовать разрешения — разрешите, когда Codex спросит.
+
+Обновить (по документации Codex; сами не проверяли):
+
+```
+codex plugin marketplace upgrade plexus
+```
+
+Чего пока нет: расход по журналам Codex (итог круга показывает «—») и автоподсказки об обновлении, поэтому обновляйте командой выше.
+
 ## Подключить в проект
 
 Запись в `.claude/settings.json` репозитория (готовый файл — `templates/settings.json`) плагин **не скачивает**: `enabledPlugins` только включает его для тех, у кого он уже стоит. Каждый участник ставит Плексус один раз сам, из папки проекта:

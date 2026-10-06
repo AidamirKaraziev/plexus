@@ -6,6 +6,8 @@ version: 1.0.0
 
 # Карта базы знаний
 
+Корень Плексуса — `${CLAUDE_PLUGIN_ROOT}`; в Codex эта строка не раскрывается — бери путь из строки контекста «корень Плексуса: …», а если её нет — папку на два уровня выше этого SKILL.md.
+
 Budget for one call: **no more than 2k tokens**. That holds because the guard
 returns the folders and the counts already computed, and no note is ever opened.
 
