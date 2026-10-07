@@ -36,6 +36,9 @@ The version is never written in this text: it is always read from `plugin.json`.
                           после «утверждаю» раздаёт задачи работникам и ведёт экран
           /plexus:analyst разбор сессий на паттерны, предложения правок скиллам
 
+ФУНДАМЕНТ /plexus:architect  аудит по областям параллельно, баллы, спорное по одному;
+                             в vault аудит и ADR, AGENTS.md по папкам, эпик «Фундамент»
+
 ПЛАН      /plexus:roadmap        создать план, нарезать эпик на этапы
           /plexus:roadmap sync   свести план с ledger и git
           /plexus:status         что в работе, что дальше, расход по областям
