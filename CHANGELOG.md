@@ -3,6 +3,10 @@
 Версия набора — в `VERSION`. У каждого скилла своя `version:` во фронтматтере.
 Откат одного скилла, не трогая остальные: `git checkout v1.0.0 -- stage-end/`.
 
+## 2.9.0 — 2026-10-09
+
+- Архитектор /plexus:architect закладывает фундамент проекта; команды end, init, help вместо close, aid-project-init, aid; дорожки работников стартуют с ветки человека
+
 ## 2.8.1-beta.3 — 2026-10-09
 
 - Команды переименованы: /plexus:close → /plexus:end, /plexus:aid-project-init → /plexus:init, /plexus:aid → /plexus:help
