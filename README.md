@@ -10,7 +10,7 @@
 /plugin marketplace add AidamirKaraziev/plexus
 ```
 
-затем `/plugin install plexus@plexus`. Вход в работу — `/plexus:start`, шпаргалка — `/plexus:aid`.
+затем `/plugin install plexus@plexus`. Вход в работу — `/plexus:start`, шпаргалка — `/plexus:help`.
 
 ## Codex
 

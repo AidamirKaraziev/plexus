@@ -30,7 +30,7 @@ Do **not** open epic sub-plans — `counters.py` already returned the next stage
 The one exception is `/plexus:status E01`: then read that single sub-plan and show all
 of its stages.
 
-No `.claude/plan/roadmap.md` — say one line about `/plexus:aid-project-init` and stop.
+No `.claude/plan/roadmap.md` — say one line about `/plexus:init` and stop.
 
 ## How to render it
 
@@ -59,7 +59,7 @@ ASTRA · feat/clean-chat-and-gifts · 8 сен
 ЗНАНИЕ   решения 4 · баги 2 · приёмы 1 · интеграции 0     всего 7
 
 ХВОСТЫ   2 файла не закоммичены
-         5 сессий вне учёта — этап не закрывали через /plexus:close
+         5 сессий вне учёта — этап не закрывали через /plexus:end
 ```
 
 Screen rules:
@@ -68,7 +68,7 @@ Screen rules:
 - `ЗНАНИЕ` is one line, folders and counts exactly as `vault.py` printed them.
   The guard refused — drop the block whole and say nothing about it, except a
   base that does not exist at all: that is one line under `ХВОСТЫ`,
-  «базы знаний нет — `/plexus:aid-project-init`»;
+  «базы знаний нет — `/plexus:init`»;
 - percentages and bars come from the scripts — never compute them yourself;
 - the branch lines are the `ПО ВЕТКАМ` block of `spend.py`, verbatim, under
   `ИТОГО`; `main` is the sessions before streams and the main-checkout work.

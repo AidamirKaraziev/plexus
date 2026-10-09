@@ -186,7 +186,7 @@ ADR: N · перенесено: K · в архиве: M · AGENTS.md: P папо
 Дальше: /plexus:task <первый этап>
 ```
 
-Текст коммита не пишет — это `/plexus:close` или `/plexus:commit-message`.
+Текст коммита не пишет — это `/plexus:end` или `/plexus:commit-message`.
 
 ## Нельзя
 
