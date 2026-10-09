@@ -1,6 +1,6 @@
 ---
-name: aid-project-init
-description: Set up a business project from scratch — the knowledge base in vault/, the plan in .claude/plan, the ledger and the git hook — through a short interview, so that /plexus:note, /plexus:roadmap, /plexus:status and /plexus:start start working. Use when the user invokes /plexus:aid-project-init, or says «заведи проект», «настрой базу знаний здесь», «подключи мои скиллы к этому репозиторию», "set up this project".
+name: init
+description: Set up a business project from scratch — the knowledge base in vault/, the plan in .claude/plan, the ledger and the git hook — through a short interview, so that /plexus:note, /plexus:roadmap, /plexus:status and /plexus:start start working. Use when the user invokes /plexus:init, or says «заведи проект», «настрой базу знаний здесь», «подключи мои скиллы к этому репозиторию», "set up this project".
 version: 1.2.0
 ---
 

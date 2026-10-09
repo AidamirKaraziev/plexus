@@ -55,7 +55,7 @@ question, and read nothing until the answer arrives.
 | `/plexus:roadmap sync` | reconcile the plan with reality |
 | `/plexus:roadmap move` | reorder priorities |
 
-No `.claude/plan/roadmap.md` — mention `/plexus:aid-project-init` and stop.
+No `.claude/plan/roadmap.md` — mention `/plexus:init` and stop.
 
 ## `/plexus:roadmap new` — the plan from scratch
 
@@ -95,7 +95,7 @@ recounted. Shorten the description rather than wrapping it.
 
 Every open stage must carry: a number, a statement starting with a verb, area
 tags, and a `готово, когда:` line with a checkable criterion. That line is what
-`/plexus:close` reads when deciding whether the stage can be closed.
+`/plexus:end` reads when deciding whether the stage can be closed.
 
 ### The cutting rule — one stage equals one session
 

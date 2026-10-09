@@ -57,7 +57,7 @@ def main() -> int:
     plan = Path(args.repo).resolve() / ".claude" / "plan"
     roadmap = plan / "roadmap.md"
     if not roadmap.exists():
-        print("нет .claude/plan/roadmap.md — запусти /aid-project-init")
+        print("нет .claude/plan/roadmap.md — запусти /plexus:init")
         return 1
 
     out, changed, closed = [], False, False

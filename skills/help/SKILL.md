@@ -1,6 +1,6 @@
 ---
-name: aid
-description: Cheat sheet for the user's own skills — what each command does, when to call it and in what order. Use when the user invokes /plexus:aid, or says «какие у меня команды», «что делает каждый скилл», «напомни список команд», «шпаргалка по скиллам», "list my commands", "what skills do I have".
+name: help
+description: Cheat sheet for the user's own skills — what each command does, when to call it and in what order. Use when the user invokes /plexus:help, or says «какие у меня команды», «что делает каждый скилл», «напомни список команд», «шпаргалка по скиллам», "list my commands", "what skills do I have".
 version: 1.8.0
 ---
 
@@ -22,12 +22,12 @@ The version is never written in this text: it is always read from `plugin.json`.
 
 МОИ КОМАНДЫ
 
-ХОД РАБОТЫ   /plexus:start → работа делают работники → /plexus:close → коммит руками
+ХОД РАБОТЫ   /plexus:start → работа делают работники → /plexus:end → коммит руками
              две двери; внутри них система сама зовёт нужный скилл
 
 СЕССИЯ    /plexus:start   вход: состояние проекта, один вопрос вариантами, передача работы;
                           плана нет — заведёт, круг открыт — продолжит молча
-          /plexus:close   выход: проверки по файлу круга, итог с расходом, знание,
+          /plexus:end     выход: проверки по файлу круга, итог с расходом, знание,
                           уборка дорожек, текст коммита; сам не коммитит
           /plexus:commit-message  текст коммита отдельно, посреди работы; сам не коммитит
 
@@ -36,6 +36,9 @@ The version is never written in this text: it is always read from `plugin.json`.
                           после «утверждаю» раздаёт задачи работникам и ведёт экран
           /plexus:analyst разбор сессий на паттерны, предложения правок скиллам
 
+ФУНДАМЕНТ /plexus:architect  аудит по областям параллельно, баллы, спорное по одному;
+                             в vault аудит и ADR, AGENTS.md по папкам, эпик «Фундамент»
+
 ПЛАН      /plexus:roadmap        создать план, нарезать эпик на этапы
           /plexus:roadmap sync   свести план с ledger и git
           /plexus:status         что в работе, что дальше, расход по областям
@@ -43,11 +46,11 @@ The version is never written in this text: it is always read from `plugin.json`.
 ЗНАНИЕ    /plexus:note    одна заметка в vault и строка в проект.md
           /plexus:map     карта базы: какие папки, что куда, сколько заметок
 
-НАСТРОЙКА /plexus:aid-project-init  завести проект: база знаний, план, ledger, хук
-          /plexus:update            обновить Плексус до последней версии, потом перезапуск Claude
-          /plexus:aid               этот экран
+НАСТРОЙКА /plexus:init    завести проект: база знаний, план, ledger, хук
+          /plexus:update  обновить Плексус до последней версии, потом перезапуск Claude
+          /plexus:help    этот экран
 
-ЧАСТОТА   каждую сессию: start, close, коммит руками
+ЧАСТОТА   каждую сессию: start, end, коммит руками
           раз в неделю: roadmap sync
 ```
 
@@ -56,7 +59,7 @@ means one more line here, added by hand when the skill is added.
 
 ## When asked about one command
 
-`/plexus:aid close` or «что делает close» — then the block above is not
+`/plexus:help end` or «что делает end» — then the block above is not
 printed at all. Read that one `SKILL.md` (`${CLAUDE_PLUGIN_ROOT}/skills/<имя>/SKILL.md`) and
 answer in at most 12 lines: what it does, when to call it, what it touches,
 what it deliberately does not do. No advice afterwards.

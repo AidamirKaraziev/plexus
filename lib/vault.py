@@ -114,7 +114,7 @@ def main():
 
     vaults = find_vaults(root)
     if not vaults:
-        fail("нет базы знаний в этом репозитории — запусти /aid-project-init")
+        fail("нет базы знаний в этом репозитории — запусти /plexus:init")
     if len(vaults) > 1:
         names = ", ".join(os.path.relpath(v, root) for v in vaults)
         fail(f"нашлось несколько баз ({names}) — спроси человека, в какую писать")

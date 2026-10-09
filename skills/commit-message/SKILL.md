@@ -15,7 +15,7 @@ from the IDE, so the answer must contain no git commands and no Run-button block
 
 The message itself is written in Russian.
 
-`/plexus:close` calls this skill as its last step, so the user gets the commit
+`/plexus:end` calls this skill as its last step, so the user gets the commit
 text without a second command; the rules are the same either way.
 
 ## What to do
@@ -64,7 +64,7 @@ text without a second command; the rules are the same either way.
 ## The ledger needs no attention here
 
 Commit hashes are appended to `.claude/ledger.jsonl` by the `post-commit` git
-hook (installed by `/plexus:aid-project-init`), the moment the user commits. This skill never
+hook (installed by `/plexus:init`), the moment the user commits. This skill never
 writes to the ledger and stays what it was: fast.
 
 ## Format

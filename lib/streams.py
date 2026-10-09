@@ -161,7 +161,7 @@ def main() -> int:
     args = ap.parse_args()
     repo = Path(args.repo).resolve()
     if not (repo / ".claude" / "plan" / "roadmap.md").exists():
-        print("нет .claude/plan/roadmap.md — запусти /aid-project-init")
+        print("нет .claude/plan/roadmap.md — запусти /plexus:init")
         return 1
     items = list(epics(repo))
     warn(items)
