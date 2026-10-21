@@ -93,6 +93,26 @@ Write `.claude/plan/E01-<name>.md` in the format below.
 and the ` · n/m · ` counter on the same line; a wrapped line silently stops being
 recounted. Shorten the description rather than wrapping it.
 
+### Тип эпика
+
+Тип проекта — строка `тип: <значение>` в шапке `.claude/plan/roadmap.md`
+рядом с `проект:` (её ставит `/plexus:init`). Значения одним словом:
+`перенос`, `новый`, `развитие`, `рефакторинг`.
+
+При заведении эпика (в `new` и при добавлении нового) спроси тип через
+`AskUserQuestion`; первый вариант — «как у проекта», дальше остальные значения.
+- «как у проекта» — в строку эпика ничего не дописывай;
+- другой тип — допиши `· тип: <значение>` **перед** `· n/m · <области>`:
+  `counters.py` ищет ` · n/m · `, последний кусок строки — область, порядок важен.
+- у проекта нет `тип:` — подскажи `/plexus:init`, но эпик заведи всё равно.
+
+Строка эпика в `roadmap.md`:
+
+```
+- **E31 · Имя** — описание · тип: перенос · 2/12 · skills+lib      (свой тип)
+- **E32 · Имя** — описание · 0/5 · back                           (тип проекта)
+```
+
 Every open stage must carry: a number, a statement starting with a verb, area
 tags, and a `готово, когда:` line with a checkable criterion. That line is what
 `/plexus:end` reads when deciding whether the stage can be closed.

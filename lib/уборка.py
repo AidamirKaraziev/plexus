@@ -8,7 +8,9 @@
 
 Сносится только то, что влито в текущую ветку человека (по содержимому: `git cherry`
 пуст — перенос cherry-pick'ом тоже считается) и не имеет несохранённых правок.
-Всё остальное остаётся и печатается с причиной.
+Всё остальное остаётся и печатается с причиной. Ветку удаляет `branch -D`, но только
+после своей проверки `git cherry`: `-d` смотрит на предков HEAD и после cherry-pick'а
+отказывает. Сбой на одной дорожке не обрывает уборку остальных — она остаётся с причиной.
 
     python3 ${CLAUDE_PLUGIN_ROOT}/lib/уборка.py --сухой-прогон   # только показать
     python3 ${CLAUDE_PLUGIN_ROOT}/lib/уборка.py                  # снести
@@ -59,6 +61,13 @@ def влита(ветка: str, root: Path) -> bool:
     return r.returncode == 0 and not any(l.startswith("+") for l in r.stdout.splitlines())
 
 
+def снести_ветку(ветка: str, root: Path) -> None:
+    """`branch -D` после проверки `git cherry`: невлитое не удаляется никогда."""
+    if not влита(ветка, root):
+        raise RuntimeError(f"не влита в {ветка_человека(root)}")
+    git("branch", "-D", ветка, cwd=root)
+
+
 def грязная(путь: Path, root: Path) -> bool:
     return bool(git("status", "--porcelain", cwd=путь, check=False))
 
@@ -85,6 +94,10 @@ def самопроверка() -> int:
         g("worktree", "add", "-b", "worktree-agent-abc", str(base / "w1"))
         (base / "w1" / "b").write_text("b\n")
         g("add", ".", cwd=base / "w1"); g("commit", "-m", "b", cwd=base / "w1")
+        # свой коммит в work до переноса: иначе cherry-pick в ту же секунду даёт тот же SHA,
+        # ветка становится предком HEAD, и сбой `branch -d` не воспроизводится
+        (repo / "d").write_text("d\n")
+        g("add", "."); g("commit", "-m", "d")
         g("cherry-pick", "worktree-agent-abc")
         # дорожка с невлитым коммитом
         g("worktree", "add", "-b", "claude/x", str(base / "w2"))
@@ -109,7 +122,23 @@ def самопроверка() -> int:
         if ошибки:
             print("САМОПРОВЕРКА ПРОВАЛЕНА:", *ошибки, out, r.stderr, sep="\n")
             return 1
-    print("самопроверка: ок (4 случая)")
+
+        # настоящий прогон: забранное cherry-pick'ом сносится без сбоя, невлитое остаётся
+        r = subprocess.run([sys.executable, __file__, "--репозиторий", str(repo)],
+                           capture_output=True, text=True)
+        ветки = set(g("branch", "--format=%(refname:short)").splitlines())
+        if r.returncode or "сбой" in r.stdout:
+            ошибки.append("уборка упала или дала сбой")
+        if ветки & {"worktree-agent-abc", "worktree-agent-old"}:
+            ошибки.append(f"влитые ветки остались: {sorted(ветки)}")
+        if not {"claude/x", "worktree-agent-new"} <= ветки:
+            ошибки.append(f"невлитые ветки снесены: {sorted(ветки)}")
+        if (base / "w1").exists() or not (base / "w2").exists():
+            ошибки.append("дорожки w1/w2 не в том состоянии")
+        if ошибки:
+            print("САМОПРОВЕРКА ПРОВАЛЕНА:", *ошибки, r.stdout, r.stderr, sep="\n")
+            return 1
+    print("самопроверка: ок (4 случая сухим прогоном + настоящий прогон)")
     return 0
 
 
@@ -143,8 +172,12 @@ def main() -> int:
             оставил.append(f"{д['путь'].name} · {ветка} — не влита в {ветка_человека(root)}")
             continue
         if not сухой:
-            git("worktree", "remove", str(д["путь"]), cwd=root)
-            git("branch", "-d", ветка, cwd=root)
+            try:
+                git("worktree", "remove", str(д["путь"]), cwd=root)
+                снести_ветку(ветка, root)
+            except RuntimeError as e:
+                оставил.append(f"{д['путь'].name} · {ветка} — сбой: {e}")
+                continue
         снёс.append(f"{д['путь'].name} · {ветка}")
 
     for ветка in [b for п in префиксы for b in ветки_без_дорожек(root, п, занятые)]:
@@ -152,7 +185,11 @@ def main() -> int:
             оставил.append(f"— · {ветка} — не влита в {ветка_человека(root)}")
             continue
         if not сухой:
-            git("branch", "-d", ветка, cwd=root)
+            try:
+                снести_ветку(ветка, root)
+            except RuntimeError as e:
+                оставил.append(f"— · {ветка} — сбой: {e}")
+                continue
         снёс.append(f"— · {ветка} (ветка без дорожки)")
 
     if not сухой:
