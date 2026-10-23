@@ -8,12 +8,17 @@ Roadmap не трогает — счётчики пересчитывает coun
 
     python3 ${CLAUDE_PLUGIN_ROOT}/lib/streams.py [--repo .]
     python3 ${CLAUDE_PLUGIN_ROOT}/lib/streams.py --json   # для picker'а в этап-старт
+    python3 ${CLAUDE_PLUGIN_ROOT}/lib/streams.py --самопроверка
+
+Тип работы: `тип: X` в шапке roadmap.md (проектный) и `· тип: X` в строке эпика
+(свой, перед `· n/m ·`). Эпик без своего типа берёт проектный.
 """
 import argparse
 import json
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -22,6 +27,8 @@ from counters import EPIC, TODO, stages  # noqa: E402
 SECTIONS = {"## Сейчас": "Сейчас", "## Дальше": "Дальше"}
 FIELD = re.compile(r"^(статус|дата|ветка):\s*(.+?)\s*$")
 ITEM = re.compile(r"^\s*-\s+\S")
+ТИПЫ = ["перенос", "новый", "развитие", "рефакторинг"]
+ТИП_ЭПИКА = re.compile(r" · тип:\s*([^·]*?)\s*(?= · |$)")
 
 
 def frontmatter(path: Path) -> dict:
@@ -77,8 +84,28 @@ def branch_exists(repo: Path, branch: str) -> bool:
                           capture_output=True).returncode == 0
 
 
+def project_type(roadmap: Path) -> str:
+    """`тип:` из шапки roadmap.md; шапки или поля нет — пусто."""
+    lines = roadmap.read_text(encoding="utf-8").splitlines()
+    if not lines or lines[0].strip() != "---":
+        return ""
+    for line in lines[1:]:
+        if line.strip() == "---":
+            break
+        m = re.match(r"^тип:\s*(.*?)\s*$", line)
+        if m:
+            return m.group(1)
+    return ""
+
+
+def type_warn(items: list[dict]) -> list[str]:
+    return [f"⚠ {e['id']}: тип «{e['тип']}» — не из {'/'.join(ТИПЫ)}"
+            for e in items if e["тип"] and e["тип"] not in ТИПЫ]
+
+
 def epics(repo: Path):
     plan = repo / ".claude" / "plan"
+    proj_type = project_type(plan / "roadmap.md")
     dot = repo / ".claude"
     section = None
     for line in (plan / "roadmap.md").read_text(encoding="utf-8").splitlines():
@@ -91,6 +118,8 @@ def epics(repo: Path):
         eid = m.group(1)
         name = line.split("**")[1]
         area = line.rsplit(" · ", 1)[1].strip() if " · " in line else ""
+        mt = ТИП_ЭПИКА.search(line)
+        own = mt.group(1) if mt else ""
         wt = dot / "worktrees" / eid
         files = sorted(plan.glob(f"{eid}-*.md"))
         if files and (wt / ".claude" / "plan" / files[0].name).exists():  # дорожка свежее main: чекбоксы тикают там
@@ -109,6 +138,8 @@ def epics(repo: Path):
             "id": eid,
             "name": name,
             "area": area,
+            "тип": own or proj_type,
+            "тип_свой": bool(own),
             "section": section,
             "done": done,
             "total": total,
@@ -123,7 +154,7 @@ def epics(repo: Path):
         }
 
 
-def render(items) -> str:
+def render(items, project_type_set: bool = True) -> str:
     out, current = [], None
     for e in items:
         if e["section"] != current:
@@ -137,6 +168,7 @@ def render(items) -> str:
             head = f"  {mark}{e['name']}  {e['done']}/{e['total']}  {tail}"
         if e["area"] and not e["next"]:  # у этапа своя область, эпика хватит без подплана
             head += f" · {e['area']}"
+        head += f" · тип: {e['тип'] or 'тип не задан'}"
         out.append(head)
         flags = []
         if e["warn"]:
@@ -151,21 +183,83 @@ def render(items) -> str:
             flags.append(f"inbox {e['inbox']}")
         if flags:
             out.append("      " + " · ".join(flags))
+    if items and not project_type_set:
+        out.append("тип проекта не задан → /plexus:init")
+    out.extend(type_warn(items))
     return "\n".join(out)
 
 
+def selftest() -> int:
+    import counters
+    road = """---
+проект: t
+{ptype}---
+
+## Сейчас
+- **E01 · Свой** — а · тип: новый · 0/1 · lib
+- **E02 · Проектный** — б · 0/1 · lib
+- **E03 · Кривой** — в · тип: хз · 0/1 · lib
+"""
+
+    def build(d: str, ptype: str, plan_text: str) -> Path:
+        plan = Path(d) / ".claude" / "plan"
+        plan.mkdir(parents=True)
+        (plan / "roadmap.md").write_text(road.format(ptype=ptype), encoding="utf-8")
+        for e in ("E01", "E02", "E03"):
+            (plan / f"{e}-x.md").write_text(plan_text, encoding="utf-8")
+        return Path(d)
+
+    cases = [
+        ("свой тип", "тип: перенос\n",
+         lambda by, t: by["E01"]["тип"] == "новый" and by["E01"]["тип_свой"] is True
+         and by["E01"]["area"] == "lib"),
+        ("проектный", "тип: перенос\n",
+         lambda by, t: by["E02"]["тип"] == "перенос" and by["E02"]["тип_свой"] is False
+         and "тип проекта не задан" not in t),
+        ("без типа при пустом проекте", "",
+         lambda by, t: by["E02"]["тип"] == "" and "Проектный" in t and "тип: тип не задан" in t
+         and "тип проекта не задан → /plexus:init" in t),
+        ("неверное значение", "тип: перенос\n",
+         lambda by, t: "⚠ E03" in t),
+    ]
+    bad = 0
+    for name, ptype, check in cases:
+        with tempfile.TemporaryDirectory() as d:
+            repo = build(d, ptype, "- [ ] S01 этап · lib\n")
+            items = list(epics(repo))
+            text = render(items, bool(project_type(repo / ".claude" / "plan" / "roadmap.md")))
+            ok = bool(check({e["id"]: e for e in items}, text))
+        print(("ок    " if ok else "не ок ") + name)
+        bad += not ok
+    with tempfile.TemporaryDirectory() as d:
+        repo = build(d, "тип: перенос\n", "- [x] S01 а\n- [ ] S02 б\n")
+        r = subprocess.run([sys.executable, str(Path(counters.__file__)), "--repo", str(repo)],
+                           capture_output=True, text=True)
+        txt = (repo / ".claude" / "plan" / "roadmap.md").read_text(encoding="utf-8")
+        ok = r.returncode == 0 and txt.count(" · 1/2 · ") == 3 and "1/2" in r.stdout
+    print(("ок    " if ok else "не ок ") + "counters.py видит n/m")
+    bad += not ok
+    return 1 if bad else 0
+
+
 def main() -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", default=".")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--самопроверка", action="store_true")
     args = ap.parse_args()
+    if args.самопроверка:
+        return selftest()
     repo = Path(args.repo).resolve()
     if not (repo / ".claude" / "plan" / "roadmap.md").exists():
         print("нет .claude/plan/roadmap.md — запусти /plexus:init")
         return 1
     items = list(epics(repo))
     warn(items)
-    print(json.dumps(items, ensure_ascii=False, indent=1) if args.json else render(items))
+    has_type = bool(project_type(repo / ".claude" / "plan" / "roadmap.md"))
+    print(json.dumps(items, ensure_ascii=False, indent=1) if args.json else render(items, has_type))
     return 0
 
 
