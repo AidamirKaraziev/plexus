@@ -2,7 +2,7 @@
 """Дорожки: эпики из «Сейчас» и «Дальше» одним экраном.
 
 Для каждого эпика — n/m и следующий этап (как counters.py), плюс что у него
-есть по дорожке: worktree, передача (handoff/E0N.md), входящие (inbox/E0N.md).
+есть по дорожке: worktree, входящие (inbox/E0N.md).
 ⚠ у эпиков «Сейчас», чьи ближайшие этапы делят область или оба несут `db`.
 Roadmap не трогает — счётчики пересчитывает counters.py.
 
@@ -25,25 +25,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from counters import EPIC, TODO, stages  # noqa: E402
 
 SECTIONS = {"## Сейчас": "Сейчас", "## Дальше": "Дальше"}
-FIELD = re.compile(r"^(статус|дата|ветка):\s*(.+?)\s*$")
 ITEM = re.compile(r"^\s*-\s+\S")
 ТИПЫ = ["перенос", "новый", "развитие", "рефакторинг"]
 ТИП_ЭПИКА = re.compile(r" · тип:\s*([^·]*?)\s*(?= · |$)")
-
-
-def frontmatter(path: Path) -> dict:
-    """`статус`, `дата` и `ветка` из шапки передачи. Шапки нет — пусто."""
-    out = {}
-    lines = path.read_text(encoding="utf-8").splitlines()
-    if not lines or lines[0].strip() != "---":
-        return out
-    for line in lines[1:]:
-        if line.strip() == "---":
-            break
-        m = FIELD.match(line)
-        if m:
-            out[m.group(1)] = m.group(2)
-    return out
 
 
 def inbox_items(path: Path) -> int:
@@ -77,11 +61,6 @@ def warn(items: list[dict]) -> None:
             if e["db_open"] and o["db_open"]:
                 reasons.append(f"db-этапы открыты и в {o['id']}")
         e["warn"] = " · ".join(reasons)
-
-
-def branch_exists(repo: Path, branch: str) -> bool:
-    return subprocess.run(["git", "rev-parse", "--verify", "-q", branch], cwd=repo,
-                          capture_output=True).returncode == 0
 
 
 def project_type(roadmap: Path) -> str:
@@ -126,14 +105,6 @@ def epics(repo: Path):
             files = [wt / ".claude" / "plan" / files[0].name]
         done, total, nxt = stages(files[0]) if files else (None, None, None)
         areas = open_areas(files[0]) if files else []
-        handoff = dot / "handoff" / f"{eid}.md"
-        if (wt / ".claude" / "handoff" / f"{eid}.md").exists():  # и передача пишется там же
-            handoff = wt / ".claude" / "handoff" / f"{eid}.md"
-        fm = frontmatter(handoff) if handoff.exists() else None
-        branch = fm.get("ветка", "") if fm else ""
-        unmerged = ""
-        if fm and fm.get("статус") == "закрыт" and branch.startswith(eid + "-") and branch_exists(repo, branch):
-            unmerged = branch
         yield {
             "id": eid,
             "name": name,
@@ -148,8 +119,6 @@ def epics(repo: Path):
             "db_open": any("db" in a for a in areas),
             "warn": "",
             "worktree": wt.is_dir(),
-            "handoff": {"status": fm.get("статус", "?"), "date": fm.get("дата", "?"), "branch": branch} if fm is not None else None,
-            "unmerged": unmerged,
             "inbox": inbox_items(dot / "inbox" / f"{eid}.md"),
         }
 
@@ -175,10 +144,6 @@ def render(items, project_type_set: bool = True) -> str:
             flags.append(f"⚠ {e['warn']}")
         if e["worktree"]:
             flags.append("worktree ✓")
-        if e["handoff"]:
-            flags.append(f"передача: {e['handoff']['status']} {e['handoff']['date']}")
-        if e["unmerged"]:
-            flags.append(f"⏳ {e['unmerged']} закрыт, не влит")
         if e["inbox"]:
             flags.append(f"inbox {e['inbox']}")
         if flags:

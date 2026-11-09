@@ -1,6 +1,6 @@
 ---
 name: status
-description: Show the state of the project on one dense screen — what is in progress, what comes next in the plan, hours and tokens spent per area. Reads only .claude/plan, .claude/ledger.jsonl and the per-epic handoffs; never the project code. Use when the user invokes /plexus:status, or says «где мы», «что осталось», «сколько потратили», «покажи прогресс», "where are we", "show progress".
+description: Show the state of the project on one dense screen — what is in progress, what comes next in the plan, hours and tokens spent per area. Reads only .claude/plan and .claude/ledger.jsonl; never the project code. Use when the user invokes /plexus:status, or says «где мы», «что осталось», «сколько потратили», «покажи прогресс», "where are we", "show progress".
 version: 1.4.0
 ---
 
@@ -18,7 +18,7 @@ Speak Russian to the user throughout.
 
 ```
 python3 ${CLAUDE_PLUGIN_ROOT}/lib/counters.py          # recount n/m in roadmap
-python3 ${CLAUDE_PLUGIN_ROOT}/lib/streams.py           # epics Сейчас/Дальше + next stage, worktree, handoff, inbox
+python3 ${CLAUDE_PLUGIN_ROOT}/lib/streams.py           # epics Сейчас/Дальше + next stage, worktree, inbox
 python3 ${CLAUDE_PLUGIN_ROOT}/lib/spend.py             # spend per area and per stage branch
 python3 ${CLAUDE_PLUGIN_ROOT}/lib/vault.py             # knowledge base: folders + counts
 cat .claude/plan/roadmap.md
@@ -43,7 +43,7 @@ ASTRA · feat/clean-chat-and-gifts · 8 сен
 СЕЙЧАС   E01 Подарки  4/6  ████████████░░░░░░
          → S03 напоминание получателю через 24ч · back
          ⚠ общая область back с E02 · db-этапы открыты и в E02
-         передача: в работе, 2026-09-11 · inbox 2
+         inbox 2
 
 ДАЛЬШЕ   E02 Админка   0/5 · back
          E03 Профиль   0/4 · front
@@ -76,9 +76,8 @@ Screen rules:
 - `⚠` is the line `streams.py` printed for that epic, verbatim — two streams
   «Сейчас» share an area on their next stages, or both hold open `db` stages.
   No line printed — no `⚠` on screen;
-- `передача` is the status and date `streams.py` printed for that epic, plus
-  `inbox N` when it printed one; never open `.claude/handoff/E0N.md` itself.
-  No such line — the epic has no handoff yet, and the line is dropped;
+- `inbox N` is printed by `streams.py` for that epic when it has one;
+  no such line — it is dropped;
 - after the block, nothing. No conclusions, no advice, no «дай знать, если».
 
 ## When something does not add up

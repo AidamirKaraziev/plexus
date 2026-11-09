@@ -11,7 +11,7 @@ capability: materialpostings
 Эта карточка — единственный вход в аналитику capability: открывай её по
 пути кода и иди по ссылкам, не ищи по vault.
 
-Лежит: `модули/бухгалтерия (accounting)/materialpostings/capability.md`.
+Лежит: `модули/бухгалтерия (accounting)/materialpostings/Проводки материального учёта (materialpostings).md`.
 
 ## За что отвечает
 
@@ -24,7 +24,7 @@ capability: materialpostings
 
 ## Меня затрагивают
 
-[[МАТДОК-01 приход накладной — правила не описаны]]
+[[МАТДОК-01 приход накладной]]
 
 ## Решения
 
