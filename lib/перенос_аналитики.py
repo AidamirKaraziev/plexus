@@ -23,6 +23,9 @@ import unicodedata
 from collections import defaultdict
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from имя_файла import проверить as проверить_имя  # noqa: E402
+
 КОРЕНЬ_ПЛАГИНА = Path(__file__).resolve().parent.parent
 ШАБЛОНЫ = КОРЕНЬ_ПЛАГИНА / "skills" / "analysis" / "шаблоны"
 ОБРАЗЕЦ_КАРТЫ = КОРЕНЬ_ПЛАГИНА / "skills" / "analysis" / "образец" / "модули" / "перенос" / "образец.json"
@@ -371,6 +374,16 @@ def папка_capability(vault: Path, карта: dict, cap: dict) -> Path:
     return vault / "модули" / карта["модули"][cap["модуль"]] / cap["capability"]
 
 
+def путь_карточки(папка: Path, cap: dict) -> Path:
+    """Заведённая карточка — по хвосту « (<capability>).md»; новой — «<смысл> (<capability>).md»."""
+    хвост = f" ({cap['capability']}).md"
+    if папка.is_dir():
+        найдено = sorted(p for p in папка.iterdir() if p.is_file() and нфц(p.name).endswith(хвост))
+        if найдено:
+            return найдено[0]
+    return папка / f"{cap['название']}{хвост}"
+
+
 def найденная_заготовка(папка: Path, код: str) -> list[Path]:
     дир = папка / "аналитика"
     if not дир.is_dir():
@@ -507,6 +520,24 @@ def сверить(карта: dict, ист: Источник, vault: Path) -> l
         if len(найдено) > 1:
             отказ(s["код"], None, "в папке аналитики больше одной заготовки с этим кодом: "
                   + ", ".join(p.name for p in найдено))
+
+    # имена, которые перенос собирается создать, — по правилу lib/имя_файла.py
+    def имя_плохое(что: str, имя: str):
+        причина = проверить_имя(имя)
+        if причина:
+            отказ(имя, None, f"{что} «{имя}» не откроется в любой ОС: {причина}")
+
+    for cap in карта["capability"]:
+        папка = папка_capability(vault, карта, cap)
+        имя_плохое("папка модуля", карта["модули"][cap["модуль"]])
+        имя_плохое("папка capability", cap["capability"])
+        if not папка.is_dir() or not any(нфц(p.name).endswith(f" ({cap['capability']}).md")
+                                         for p in папка.iterdir() if p.is_file()):
+            имя_плохое("карточка", путь_карточки(папка, cap).name)
+    for s in карта["сценарии"]:
+        cap = по_паре[(s["модуль"], s["capability"])]
+        if not найденная_заготовка(папка_capability(vault, карта, cap), s["код"]):
+            имя_плохое("заготовка", f"{s['код']} {s['название'].split(' — ')[0]}.md")
     return причины
 
 
@@ -553,11 +584,11 @@ def новая_карточка(карта: dict, cap: dict) -> list[str]:
              f"путь в коде: backend/internal/modules/{en}/{cap['capability']}",
              f"владелец таблиц: {', '.join(cap['таблицы'])}", "---"]
     тело = []
-    for с in тело_шаблона("capability.md"):
+    for с in тело_шаблона("карточка capability.md"):
         if с.startswith("# "):
             с = f"# {cap['название']} ({cap['код']})"
         elif с.startswith("Лежит:"):
-            с = f"Лежит: `модули/{папка}/{cap['capability']}/capability.md`."
+            с = f"Лежит: `модули/{папка}/{cap['capability']}/{cap['название']} ({cap['capability']}).md`."
         тело.append(с)
     строки = шапка + тело
     строки = заменить_раздел(строки, "За что отвечает", [cap["за что отвечает"]])
@@ -619,7 +650,7 @@ def прогон(карта: dict, ист: Источник, vault: Path, сух
     for s in карта["сценарии"]:
         папка = папка_capability(vault, карта, по_паре[(s["модуль"], s["capability"])])
         найдено = найденная_заготовка(папка, s["код"])
-        заготовки[s["код"]] = найдено[0] if найдено else папка / "аналитика" / f"{s['код']} {s['название']}.md"
+        заготовки[s["код"]] = найдено[0] if найдено else папка / "аналитика" / f"{s['код']} {s['название'].split(' — ')[0]}.md"
 
     свои: dict[tuple, list[str]] = defaultdict(list)
     входящие: dict[tuple, list[str]] = defaultdict(list)
@@ -659,7 +690,7 @@ def прогон(карта: dict, ист: Источник, vault: Path, сух
             записать(вид, путь, "\n".join(новые) + "\n")
 
     for cap in карта["capability"]:
-        путь = папка_capability(vault, карта, cap) / "capability.md"
+        путь = путь_карточки(папка_capability(vault, карта, cap), cap)
         ключ = (cap["модуль"], cap["capability"])
         if путь.exists():
             было, вид = прочитать_строки(путь), "ссылки"
@@ -776,8 +807,12 @@ def самопроверка() -> int:
     мд = "модули/имущество (assets)/materialdocuments"
     мп = "модули/бухгалтерия (accounting)/materialpostings"
     ссв = "модули/бухгалтерия (accounting)/materiallinks"
-    заг1 = f"{мд}/аналитика/МАТДОК-01 приход накладной — правила не описаны.md"
-    заг2 = f"{мд}/аналитика/МАТДОК-02 расход и перемещение — правила не описаны.md"
+    _назв = {c["capability"]: c["название"] for c in образец["capability"]}
+    к_мд = f"{мд}/{_назв['materialdocuments']} (materialdocuments).md"
+    к_мп = f"{мп}/{_назв['materialpostings']} (materialpostings).md"
+    к_ссв = f"{ссв}/{_назв['materiallinks']} (materiallinks).md"
+    заг1 = f"{мд}/аналитика/МАТДОК-01 приход накладной.md"
+    заг2 = f"{мд}/аналитика/МАТДОК-02 расход и перемещение.md"
 
     # опись
     with tempfile.TemporaryDirectory() as d:
@@ -811,7 +846,7 @@ def самопроверка() -> int:
         ист, vault, карта = сцена(d)
         арг = ["--карта", str(карта), "--источник", str(ист), "--vault", str(vault)]
         r = запуск(*арг)
-        нужные = [f"{мд}/capability.md", f"{мп}/capability.md", f"{ссв}/capability.md", заг1, заг2,
+        нужные = [к_мд, к_мп, к_ссв, заг1, заг2,
                   f"{мд}/аналитика/кадры/new-arrival.png", f"{мд}/аналитика/кадры/IUD_B_TA_DOCUMENT.sql",
                   f"{мд}/аналитика/кадры/expense-fast-entry.png"]
         есть = all((vault / n).exists() for n in нужные)
@@ -827,6 +862,14 @@ def самопроверка() -> int:
                      and "- вне источника: `../references/media/image2.png`" in з1
                      and "- без файла: `-definition.sql`" in з1
                      and "Спорная раскладка:" in з2 and "## Контекст" in з1))
+        с0 = прочесть(vault / к_мд) if есть else ""
+        итог.append(("новые пути: заготовка без « — », шапка и заголовок полные, карточка по смыслу",
+                     есть and "название: приход накладной — правила не описаны" in з1
+                     and "# МАТДОК-01 приход накладной — правила не описаны" in з1
+                     and f"# {_назв['materialdocuments']} (МАТДОК)" in с0
+                     and f"/{_назв['materialdocuments']} (materialdocuments).md`." in с0
+                     and not (vault / мд / "capability.md").exists()
+                     and sorted(p.name for p in (vault / мд).glob("*.md")) == [f"{_назв['materialdocuments']} (materialdocuments).md"]))
         с = сторож(vault)
         if с.returncode != 0:
             print(с.stdout + с.stderr)
@@ -834,11 +877,19 @@ def самопроверка() -> int:
 
         до = _снимок(vault)
         r = запуск(*арг)
-        карточка = vault / нужные[1]
+        карточка = vault / к_мп
         итог.append(("повторный прогон: ни одного изменённого файла, ссылки не задвоены",
                      r.returncode == 0 and до == _снимок(vault) and "ничего менять не нужно" in r.stdout
                      and прочесть(карточка).count("[[МАТДОК-01") == 1))
 
+        # карточка с другим смыслом в имени находится по хвосту, второй не создаётся
+        старая = vault / мд / "Другой смысл (materialdocuments).md"
+        (vault / к_мд).rename(старая)
+        r = запуск(*арг)
+        итог.append(("карточка с другим смыслом в имени: найдена по хвосту, вторая не создана",
+                     r.returncode == 0 and старая.exists() and not (vault / к_мд).exists()
+                     and len(list((vault / мд).glob("*(materialdocuments).md"))) == 1
+                     and сторож(vault).returncode == 0))
         (vault / заг1).write_text(прочесть(vault / заг1).replace("## Контекст\n", "## Контекст\nРУЧНАЯ ПРАВКА аналитика.\n", 1),
                                   encoding="utf-8")
         карточка.write_text(прочесть(карточка).replace("## Решения\n", "## Решения\n\nРучная строка карточки.\n", 1),
@@ -886,6 +937,36 @@ def самопроверка() -> int:
         ист, vault, карта = сцена(d, изменить_карту=lambda к: к.update({"формат": 2}))
         r = запуск("--карта", str(карта), "--источник", str(ист), "--vault", str(vault))
         итог.append(("отказ 1: формат не 1", r.returncode == 1 and "формат не поддерживается" in r.stderr))
+
+    # плохое имя в карте: отказ 2 до записи, в сухом тоже; vault до = после
+    def плохое_имя(изм):
+        for доп in ([], ["--сухой"]):
+            with tempfile.TemporaryDirectory() as d:
+                ист, vault, карта = сцена(d, изменить_карту=изм)
+                (vault / "заметка.md").write_text("до", encoding="utf-8")
+                до = _снимок(vault)
+                r = запуск("--карта", str(карта), "--источник", str(ист), "--vault", str(vault), *доп)
+                if not (r.returncode == 2 and "не откроется в любой ОС" in r.stdout and до == _снимок(vault)):
+                    return False
+        return True
+
+    def смысл(к):
+        к["capability"][0]["название"] = "приход: накладная"
+
+    def имя_cap(к):
+        старое = к["capability"][0]["capability"]
+        к["capability"][0]["capability"] = "con"
+        for s in к["сценарии"]:
+            if s["capability"] == старое:
+                s["capability"] = "con"
+            s["затрагивает"] = ["con" if x == старое else x for x in s["затрагивает"]]
+
+    def заготовка(к):
+        к["сценарии"][0]["название"] = "приход? накладной — проблема"
+
+    итог.append(("отказ 2: «:» в смысле capability; до записи, и в --сухой; vault до = после", плохое_имя(смысл)))
+    итог.append(("отказ 2: зарезервированное имя папки capability", плохое_имя(имя_cap)))
+    итог.append(("отказ 2: «?» в названии заготовки", плохое_имя(заготовка)))
 
     плохо = 0
     for имя, ок in итог:

@@ -9,6 +9,11 @@
     python3 lib/vault.py           путь, проект и карта папок
     python3 lib/vault.py --path    только путь
     python3 lib/vault.py --check   только проверка, одна строка
+    python3 lib/vault.py --имя "<имя файла>"   годится ли имя для любой ОС
+    python3 lib/vault.py --самопроверка
+
+--имя не ищет vault: проверяет только имя по lib/имя_файла.py (код 0 —
+годится; код 1 — причина в stderr).
 
 Код возврата 1 — писать нельзя, причина в stderr.
 """
@@ -17,6 +22,9 @@ import os
 import re
 import subprocess
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from имя_файла import проверить as проверить_имя  # noqa: E402
 
 INDEX = "проект.md"
 MAP = "карта.md"
@@ -108,8 +116,43 @@ def read_map(vault):
     return rows
 
 
+def check_name(name):
+    reason = проверить_имя(name)
+    if reason:
+        fail(f"плохое имя файла «{name}»: {reason}")
+    print(f"ок · имя «{name}»")
+
+
+def selftest():
+    me = os.path.abspath(__file__)
+    cases = [
+        ("Заказ: статусы.md", 1, "запрещённый символ «:»"),
+        ("Заказ - статусы.md", 0, ""),
+        ("CON.md", 1, "зарезервированное имя"),
+        ("заметка.", 1, "точка в конце"),
+        ("", 1, "пустое имя"),
+    ]
+    errors = []
+    for name, code, text in cases:
+        r = subprocess.run([sys.executable, me, "--имя", name],
+                           capture_output=True, text=True, cwd="/")
+        if r.returncode != code or text not in r.stderr:
+            errors.append(f"{name!r}: код {r.returncode}, stderr {r.stderr.strip()!r}")
+    if errors:
+        print("самопроверка: провал")
+        for e in errors:
+            print(" -", e)
+        sys.exit(1)
+    print("самопроверка: ок")
+
+
 def main():
-    mode = sys.argv[1] if len(sys.argv) > 1 else ""
+    args = sys.argv[1:]
+    if args and args[0] == "--самопроверка":
+        return selftest()
+    if args and args[0] == "--имя":
+        return check_name(args[1] if len(args) > 1 else "")
+    mode = args[0] if args else ""
     root = repo_root()
 
     vaults = find_vaults(root)

@@ -1,7 +1,7 @@
 ---
 name: note
-description: Record one decision, one solved bug or one reusable pattern in the project's vault/ — a single note plus a single line in проект.md, without walking the whole vault. Use when the user invokes /plexus:note, or says «запиши это решение», «зафиксируй, почему так сделали», «сохрани находку», "write this down".
-version: 2.0.0
+description: Record one decision, one solved bug, one dead end or one reusable pattern in the project's vault/ — a single note plus a single line in проект.md, without walking the whole vault. Use when the user invokes /plexus:note, or says «запиши это решение», «зафиксируй, почему так сделали», «сохрани находку», "write this down".
+version: 3.0.0
 ---
 
 # One note into the knowledge base
@@ -47,43 +47,47 @@ preamble, no summing up afterwards. The headers stay Russian.
    show the refusal to the user word for word and stop. Do not look for a vault
    yourself, do not create one, do not write anywhere else.
 
-2. Pick the folder from the map the guard returned. The map is this project's
-   own — the folders are named by the person who set it up, so read the
-   description after the dash rather than guessing by name.
+2. Pick the kind: решение, баг, тупик или паттерн. The kind decides the folder
+   (решение → `решения/`, баг → `баги/`, тупик → `тупики/`, паттерн →
+   `приёмы/`); the format of each kind lives in the script, not here.
 
-   No folder fits — tell the user this does not amount to a note and write no
-   file. A small fix with no fork in it is not knowledge.
+   Nothing fits — tell the user this does not amount to a note and write no
+   file. A small fix with no fork in it is not knowledge. The script refuses
+   (code 2) when the folder is missing from the map in `проект.md` — show the
+   reason word for word and stop.
 
-3. Check there is no such note already: `ls <vault>/<папка>/`. Names are
-   statements, so the listing is enough to tell whether to open one. A close
-   note exists — **update it** instead of creating a second.
+3. Find the epic and the circle in your own lock: the file
+   `.claude/locks/<круг>.json` whose `кто` equals `git config user.name`. The
+   file name is the `круг`; `цель` `E32-S02` gives the `эпик` `E32`. No lock —
+   `круг: —`, and the epic is asked of the user or `—`.
 
-4. Write the file. The name is a statement, in Russian, spaces not dashes, no
-   date: `подарочная ссылка живёт в экране а не карточкой в чате.md`.
+4. Check there is no such note already: `ls <vault>/<папка>/`. Names are
+   statements, so the listing is enough. A close note exists — **update it**
+   instead of creating a second. Optionally
+   `python3 ${CLAUDE_PLUGIN_ROOT}/lib/заметка.py --устаревшие <файл>` lists
+   outdated candidates of the same area; show them and delete only after the
+   user's «да».
 
-5. Append one line to the note list in `<vault>/проект.md` and bump `обновлён:`
-   in its frontmatter. A note missing from that file does not exist for the
-   next session.
+5. Create the draft. The name is a statement, in Russian, spaces not dashes, no
+   date:
 
-6. Check every `[[link]]` in the new note against existing filenames. A link to
-   a note not written yet is fine — say so in one line.
+   ```
+   python3 ${CLAUDE_PLUGIN_ROOT}/lib/заметка.py --новая <вид> --имя "<утверждение>" --эпик <E..> --круг "<имя>"
+   ```
 
-## Note format
+   It writes the template, the line in the note list of `проект.md` and
+   `обновлён:`, and prints the path. Code 2 — the name is taken (update that
+   note), Windows rejects it (rename), or the folder is not in the map: show
+   the reason, fix, retry.
 
-Frontmatter `tags` + `date`, first tag is the folder name. The H1 repeats the
-statement from the filename. Wiki-links to related notes at the end. Prose,
-lines under 79 characters, Russian.
+6. Fill every section of the draft from the session; the sections are the
+   script's. Then check:
 
-Three kinds of note carry the whole system and are worth writing in a fixed
-shape whatever the folders are called in this project:
+   ```
+   python3 ${CLAUDE_PLUGIN_ROOT}/lib/заметка.py --проверить <файл>
+   ```
 
-- **решения** — the H1 is the decision itself. Sections: **Почему**, **Цена
-  решения** (what it cost), **Когда вернёмся** (the condition for revisiting).
-  Name the rejected alternative outright.
-- **баги** — the H1 is the bug as a past-tense statement. The symptom, the
-  real cause, **Как починили**, then **Урок** — what to check next time.
-- **приёмы** — the H1 is the technique as a statement. A short code fragment,
-  **Почему так**, then **Что важно не забыть** — the traps invisible in the code.
+   Code 2 — a section is missing or empty: complete it and check again.
 
 ## Never
 

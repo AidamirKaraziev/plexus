@@ -12,7 +12,7 @@ capability: materialdocuments
 Эта карточка — единственный вход в аналитику capability: открывай её по
 пути кода и иди по ссылкам, не ищи по vault.
 
-Лежит: `модули/имущество (assets)/materialdocuments/capability.md`.
+Лежит: `модули/имущество (assets)/materialdocuments/Документы материального учёта (materialdocuments).md`.
 
 ## За что отвечает
 
@@ -21,7 +21,7 @@ capability: materialdocuments
 
 ## Своя аналитика
 
-[[МАТДОК-01 приход накладной — правила не описаны]]
+[[МАТДОК-01 приход накладной]]
 
 ## Меня затрагивают
 
