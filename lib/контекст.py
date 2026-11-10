@@ -5,7 +5,8 @@
 в самом свежем .jsonl транскрипта main-checkout'а и сравнивает с порогом —
 долей окна. Настройка — строки в шапке .claude/plan/roadmap.md:
 `контекст: 20 %` (порог, по умолчанию 20 %) и `окно: 1M` (1M, 200k или число;
-перекрывает таблицу окон по id модели; модель неизвестна → 200k).
+перекрывает таблицу окон по id модели; модель неизвестна → 200k, а если
+занято больше окна — 1M).
 
     python3 ${CLAUDE_PLUGIN_ROOT}/lib/контекст.py                      # свежая сессия
     python3 ${CLAUDE_PLUGIN_ROOT}/lib/контекст.py --сессия <файл.jsonl>
@@ -28,11 +29,24 @@ from spend import main_root, slug  # noqa: E402
 
 DEFAULT_THRESHOLD = 20.0
 DEFAULT_WINDOW = 200_000
-# окно по префиксу id модели; суффикс [1m] даёт 1M независимо от таблицы
+# окно по умолчанию по префиксу id модели (справочник моделей Anthropic,
+# 2026-10); первый совпавший, поэтому частное выше общего (opus-4-6 выше opus-4).
+# Суффикс [1m] даёт 1M независимо от таблицы, но в транскрипт он не попадает.
 WINDOWS = [
-    ("claude-opus-4", 200_000),
-    ("claude-sonnet-4", 200_000),
-    ("claude-haiku-4", 200_000),
+    # 1M
+    ("claude-fable-5", 1_000_000),     # fable-5, 5-1, 5-2
+    ("claude-mythos-5", 1_000_000),
+    ("claude-opus-5", 1_000_000),      # opus-5, 5-5
+    ("claude-sonnet-5", 1_000_000),    # sonnet-5, 5-5
+    ("claude-haiku-5", 1_000_000),     # haiku-5-5
+    ("claude-opus-4-8", 1_000_000),
+    ("claude-opus-4-7", 1_000_000),
+    ("claude-opus-4-6", 1_000_000),
+    ("claude-sonnet-4-6", 1_000_000),
+    # 200k
+    ("claude-opus-4", 200_000),        # opus-4, 4-1, 4-5
+    ("claude-sonnet-4", 200_000),      # sonnet-4, 4-5 (1M только с [1m])
+    ("claude-haiku-4", 200_000),       # haiku-4-5
     ("claude-3", 200_000),
 ]
 
@@ -130,6 +144,8 @@ def measure(repo: Path, projects: Path | None, session: Path | None) -> tuple[in
     used, model = usage
     threshold, window = read_header(repo)
     window = window or model_window(model)
+    if used > window:  # таблица отстала: занято больше окна — значит окно 1M
+        window = max(window, 1_000_000)
     pct = used / window * 100
     over = pct >= threshold
     line = (f"контекст: {fmt_size(used)} из {fmt_size(window)} · {round(pct)} % · "
@@ -137,7 +153,7 @@ def measure(repo: Path, projects: Path | None, session: Path | None) -> tuple[in
     return (1 if over else 0), line
 
 
-def _journal(path: Path, used: int, model: str = "claude-opus-4-7"):
+def _journal(path: Path, used: int, model: str = "claude-haiku-4-5-20251001"):
     rows = [{"message": {"role": "user", "content": "hi"}},
             {"message": {"role": "assistant", "model": model, "usage": {
                 "input_tokens": 1, "cache_creation_input_tokens": used - 1 - 100,
@@ -181,8 +197,19 @@ def selftest() -> int:
         head()
         _journal(d / "a.jsonl", 50_000, "gpt-unknown")
         check("неизвестная модель", measure(repo, projects, None), 1, "из 200k")
-        _journal(d / "a.jsonl", 50_000, "claude-opus-4-7[1m]")
+        _journal(d / "a.jsonl", 50_000, "claude-sonnet-4-5[1m]")
         check("суффикс [1m]", measure(repo, projects, None), 0, "из 1M")
+        _journal(d / "a.jsonl", 109_000, "claude-opus-5-5")
+        check("opus-5 — 1M", measure(repo, projects, None), 0, "109k из 1M · 11 %")
+        _journal(d / "a.jsonl", 109_000, "claude-opus-4-8")
+        check("opus-4-8 раньше opus-4", measure(repo, projects, None), 0, "из 1M")
+        for m, w in [("claude-opus-4-6", "1M"), ("claude-sonnet-4-6", "1M"), ("claude-haiku-5-5", "1M"),
+                     ("claude-fable-5-2", "1M"), ("claude-opus-4-5-20251101", "200k"),
+                     ("claude-sonnet-4-5", "200k"), ("claude-3-7-sonnet", "200k")]:
+            _journal(d / "a.jsonl", 10_000, m)
+            check(f"окно {m}", measure(repo, projects, None), 0, f"из {w} ")
+        _journal(d / "a.jsonl", 250_000, "claude-next-9")
+        check("занято больше окна", measure(repo, projects, None), 1, "250k из 1M · 25 %")
         other = tmp / "other.jsonl"
         _journal(other, 190_000)
         check("--сессия", measure(repo, projects, other), 1, "190k из 200k")
