@@ -78,6 +78,18 @@ def области_проекта(road: str) -> set[str]:
     return {"skills", "lib", "docs", "evals", "debug", "infra"}
 
 
+def имя_эпика(eid: str, title: str, rest: str, files: list[Path]) -> str:
+    """Имя эпика из строки плана: `**E19 · Имя**`, `**E14** Имя — описание` или имя подплана."""
+    if " · " in title:
+        return title.split(" · ", 1)[1].strip()
+    имя = re.split(r" — | · | \(", rest, maxsplit=1)[0].strip()
+    if имя:
+        return имя
+    if files:
+        return files[0].stem.split("-", 1)[-1].strip() or eid
+    return eid
+
+
 def эпики(repo: Path) -> list[dict]:
     plan = repo / ".claude" / "plan"
     road = (plan / "roadmap.md").read_text(encoding="utf-8")
@@ -92,9 +104,9 @@ def эпики(repo: Path) -> list[dict]:
             continue
         eid = m.group(1)
         title = line.split("**")[1]
-        name = title.split(" · ", 1)[1].strip() if " · " in title else title
-        mt = ТИП_ЭПИКА.search(line)
         files = sorted(plan.glob(f"{eid}-*.md"))
+        name = имя_эпика(eid, title, line.split("**", 2)[2] if line.count("**") >= 2 else "", files)
+        mt = ТИП_ЭПИКА.search(line)
         out.append({"id": eid, "name": name, "section": section,
                     "тип": (mt.group(1) if mt else "") or ptype,
                     "area": line.rsplit(" · ", 1)[1].strip() if " · " in line else "",
@@ -599,6 +611,10 @@ def самопроверка() -> int:
         сверить("круг этапа (с ⚠ — по прямому выбору)", выбрать(модель, "E01-S04"), (0, "круг «свободный круг»"))
         сверить("сам этап", выбрать(модель, "E02-S01"), (0, "этап E02-S01"))
         сверить("нет эпика", выбрать(модель, "E09")[0], 2)
+        сверить("имя через ·", имя_эпика("E19", "E19 · Проводки", " — описание", []), "Проводки")
+        сверить("имя после **", имя_эпика("E14", "E14", " Логи для человека — описание · 11/16 · back", []), "Логи для человека")
+        сверить("имя из подплана", имя_эпика("E13", "E13", "", [Path("E13-мелочи аудита.md")]), "мелочи аудита")
+        сверить("имени нет", имя_эпика("E12", "E12", "", []), "E12")
         сверить("плохой аргумент", выбрать(модель, "что-то")[0], 1)
         круг_ = {"kind": "круг", "name": "x", "занят": False, "warn": "⚠", "epic": "E1", "stage": None, "tasks": [{"done": False}]}
         занят_ = dict(круг_, name="y", занят=True, warn="")
