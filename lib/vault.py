@@ -102,6 +102,27 @@ def find_vaults(root):
     return found
 
 
+def база_знаний(repo):
+    """Папка базы знаний проекта: может называться не vault (els-vault, astra-vault/knowledge).
+    Несколько баз: vault в корне, иначе единственная с кругами. Базы нет — <repo>/vault."""
+    from pathlib import Path
+    repo = Path(repo)
+    обычная = repo / "vault"
+    базы = [Path(b) for b in find_vaults(str(repo))]
+    if len(базы) == 1:
+        # проект.md бывает глубже кругов: astra-vault/knowledge при astra-vault/круги
+        for папка in (базы[0], *базы[0].parents):
+            if папка == repo:
+                break
+            if (папка / "круги").is_dir():
+                return папка
+        return базы[0]
+    if обычная in базы:
+        return обычная
+    с_кругами = [b for b in базы if (b / "круги").is_dir()]
+    return с_кругами[0] if len(с_кругами) == 1 else обычная
+
+
 def read_map(vault):
     """Карта папок из контракта: [(папка, что туда класть)]."""
     path = os.path.join(vault, MAP)

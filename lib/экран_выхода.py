@@ -42,6 +42,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from экран_старта import ПОСЛЕ, git, области_проекта, шапка, эпики, этапы  # noqa: E402
 from имя_файла import проверить  # noqa: E402
+from vault import база_знаний  # noqa: E402
 
 РАЗДЕЛЫ_ПЕРЕДАЧИ = ["Сделано", "Остановились на", "Ждёт тебя", "Читать только", "Проверка",
                     "Рабочая копия", "Не повторять", "Первый шаг", "Продолжить"]
@@ -51,7 +52,7 @@ from имя_файла import проверить  # noqa: E402
 # ---------- чтение ----------
 
 def найти_круг(repo: Path, имя: str) -> Path | None:
-    for папка in (repo / "vault" / "круги", repo / "vault" / "круги" / "архив"):
+    for папка in (база_знаний(repo) / "круги", база_знаний(repo) / "круги" / "архив"):
         p = папка / f"{имя}.md"
         if p.is_file():
             return p
@@ -93,7 +94,7 @@ def открыть(repo: Path, имя: str) -> tuple[dict | None, Path | None, s
         return None, None, причина
     p = найти_круг(repo, имя)
     if not p:
-        return None, None, f"нет круга «{имя}» в vault/круги/"
+        return None, None, f"нет круга «{имя}» в {база_знаний(repo).name}/круги/"
     return прочитать_круг(p), p, ""
 
 
@@ -164,10 +165,10 @@ def передача(repo: Path, имя: str, черновик: Path) -> tuple[i
     for k in РАЗДЕЛЫ_ПЕРЕДАЧИ:
         if k in части:
             out += [f"## {k}", *части[k], ""]
-    цель = repo / "vault" / "передачи" / f"{имя}.md"
+    цель = база_знаний(repo) / "передачи" / f"{имя}.md"
     цель.parent.mkdir(parents=True, exist_ok=True)
     цель.write_text("\n".join(out), encoding="utf-8")
-    return 0, f"передача: vault/передачи/{имя}.md ({len(части)} разд.)"
+    return 0, f"передача: {база_знаний(repo).name}/передачи/{имя}.md ({len(части)} разд.)"
 
 
 def закрыть(repo: Path, имя: str) -> tuple[int, str]:
@@ -179,17 +180,17 @@ def закрыть(repo: Path, имя: str) -> tuple[int, str]:
         return 2, "в круге нет задач"
     if открытые:
         return 2, "не закрыто:\n" + "\n".join(f"○ {n}" for n in открытые)
-    архив = repo / "vault" / "круги" / "архив"
+    архив = база_знаний(repo) / "круги" / "архив"
     if p.parent == архив:
         return 2, f"круг «{имя}» уже в архиве"
     if (архив / p.name).exists():
         return 2, f"в архиве уже есть «{p.name}»"
     архив.mkdir(parents=True, exist_ok=True)
     shutil.move(str(p), str(архив / p.name))
-    пер = repo / "vault" / "передачи" / f"{имя}.md"
+    пер = база_знаний(repo) / "передачи" / f"{имя}.md"
     if пер.exists():
         пер.unlink()
-    return 0, f"круг «{имя}» закрыт: в vault/круги/архив/, передача удалена"
+    return 0, f"круг «{имя}» закрыт: в {база_знаний(repo).name}/круги/архив/, передача удалена"
 
 
 def журнал(repo: Path, имя: str, статус: str, сессия: str | None = None) -> tuple[int, str]:
@@ -355,6 +356,22 @@ def самопроверка() -> int:
         сверить("круг в архиве", (repo / "vault" / "круги" / "архив" / "рабочий.md").exists(), True)
         сверить("круга на старом месте нет", (repo / "vault" / "круги" / "рабочий.md").exists(), False)
         сверить("передача удалена", пер.exists(), False)
+
+        # база знаний называется не vault: отдельный каталог, иначе repo увидит её как вложенную
+        with tempfile.TemporaryDirectory() as д2:
+            другой = Path(д2).resolve()
+            база = другой / "els-vault"
+            (база / "круги").mkdir(parents=True)
+            (база / "проект.md").write_text("# проект\n", encoding="utf-8")
+            (база / "карта.md").write_text("- круги/ — круги\n", encoding="utf-8")
+            (база / "круги" / "чужая база.md").write_text("---\nэтап: E01-S01\n---\n", encoding="utf-8")
+            сверить("база не в vault", база_знаний(другой), база)
+            сверить("круг в базе не vault", найти_круг(другой, "чужая база"), база / "круги" / "чужая база.md")
+            глубже = база / "knowledge"
+            глубже.mkdir()
+            (база / "проект.md").rename(глубже / "проект.md")
+            (база / "карта.md").rename(глубже / "карта.md")
+            сверить("круги выше проект.md", база_знаний(другой), база)
 
         # вливание: main, пауза, закрыт, да
         сверить("вливание на main", вливание(repo, "без этапа", False), (0, "main\nостался: main"))
