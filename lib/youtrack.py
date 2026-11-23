@@ -32,6 +32,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from аналитика_заметки import шапка, пусто  # noqa: E402
+from vault import база_знаний  # noqa: E402
 
 СТАТУСЫ_ЗАДАЧИ = {"утверждено", "в работе", "сделано"}
 
@@ -82,7 +83,7 @@ def вписать_ключ(текст: str, id_: str) -> str:
 def аналитики(repo: Path):
     """Заметки аналитики: [(путь, шапка, текст)]."""
     out = []
-    for p in sorted((repo / "vault" / "модули").glob("*/*/аналитика/*.md")):
+    for p in sorted((база_знаний(repo) / "модули").glob("*/*/аналитика/*.md")):
         t = p.read_text(encoding="utf-8")
         h = шапка(t)
         if h:
@@ -93,7 +94,7 @@ def аналитики(repo: Path):
 def круги(repo: Path):
     """Утверждённые круги: [(имя, этап, [(задача, закрыта)])]."""
     out = []
-    for p in sorted((repo / "vault" / "круги").glob("*.md")):
+    for p in sorted((база_знаний(repo) / "круги").glob("*.md")):
         t = p.read_text(encoding="utf-8")
         h = шапка(t) or {}
         if not (h.get("статус") or "").startswith("утверждено"):

@@ -6,7 +6,7 @@ version: 1.8.0
 
 # Cheat sheet for my own commands
 
-Корень Плексуса — `${CLAUDE_PLUGIN_ROOT}`; в Codex эта строка не раскрывается — бери путь из строки контекста «корень Плексуса: …», а если её нет — папку на два уровня выше этого SKILL.md.
+Корень Плексуса — `${CLAUDE_PLUGIN_ROOT}`; в Codex и OpenCode не раскрывается — бери путь из строки контекста «корень Плексуса: …», а если её нет — папку на два уровня выше этого SKILL.md.
 
 Read the version from `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json` (field
 `version`) — one read, the only tool call allowed. The source comes from the
@@ -16,6 +16,7 @@ any other path (no `plugins/cache`) → «черновик». Then print the blo
 **verbatim**, with «Плексус <версия> · <источник>» as its first line, and stop.
 No other files, no line of prose before or after it — one message, one screen.
 The version is never written in this text: it is always read from `plugin.json`.
+В OpenCode версия — из `package.json` у корня Плексуса (поле `version`, путь — из строки контекста «корень Плексуса: …»); источник — по суффиксу `-beta.` в версии: есть суффикс → «бета», нет → «релиз».
 
 ```
 Плексус <версия> · <источник>

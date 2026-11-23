@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from counters import EPIC, stages  # noqa: E402
 from streams import ТИП_ЭПИКА, project_type  # noqa: E402
 from заметка import тупики  # noqa: E402
+from vault import база_знаний  # noqa: E402
 import ветка_задачи  # noqa: E402
 
 РАЗДЕЛЫ = {"## Сейчас": "Сейчас", "## Дальше": "Дальше", "## Потом": "Потом"}
@@ -219,7 +220,7 @@ def собрать(repo: Path, now: datetime) -> dict:
     known = области_проекта(road)
     я = git(repo, "config", "user.name")
     журнал = записи_журнала(repo)
-    круги = [c for c in (круг(p) for p in sorted((repo / "vault" / "круги").glob("*.md"))) if c]
+    круги = [c for c in (круг(p) for p in sorted((база_знаний(repo) / "круги").glob("*.md"))) if c]
     eps = эпики(repo)
     ids = {e["id"] for e in eps}
     for c in круги:  # круг эпика, которого нет в плане, не теряем
@@ -386,9 +387,9 @@ def взять(repo: Path, имя: str, now: datetime) -> tuple[int, str]:
     я = git(repo, "config", "user.name")
     if not я:
         return 1, "нет git config user.name — замок не на кого записать"
-    файл = repo / "vault" / "круги" / f"{имя}.md"
+    файл = база_знаний(repo) / "круги" / f"{имя}.md"
     if not файл.exists():
-        return 1, f"нет круга «{имя}» в vault/круги/ (этап без круга замок не берёт)"
+        return 1, f"нет круга «{имя}» в {база_знаний(repo).name}/круги/ (этап без круга замок не берёт)"
     z = замок(repo, имя, now, я)
     if z and z["кто"] != "ты" and not z["брошен"]:
         return 2, f"круг «{имя}» занят: {z['кто']}, с {z['с']:%H:%M}"
@@ -437,20 +438,20 @@ def выбрать(модель: dict, цель: str) -> tuple[int, str]:
 
 def строки_тупиков(repo: Path, имя: str, есть: list[str]) -> list[str]:
     """Строки `тупик: [[имя]]` для эпика круга: без повторов с `есть`, вместе с `есть` не больше МАКС_ТУПИКОВ."""
-    файл = repo / "vault" / "круги" / f"{имя}.md"
+    файл = база_знаний(repo) / "круги" / f"{имя}.md"
     if not файл.exists():
         return []
     эпик = шапка(файл.read_text(encoding="utf-8")).get("этап", "").partition("-")[0].strip()
     if not эпик:
         return []
     занято = "\n".join(есть)
-    новые = [f"тупик: [[{n}]]" for n in тупики(repo / "vault", эпик) if f"[[{n}]]" not in занято and n not in занято]
+    новые = [f"тупик: [[{n}]]" for n in тупики(база_знаний(repo), эпик) if f"[[{n}]]" not in занято and n not in занято]
     return новые[:max(МАКС_ТУПИКОВ - len(есть), 0)]
 
 
 def передача(repo: Path, имя: str) -> tuple[int, str]:
     """Передача из vault/передачи/<имя>.md («Ждёт тебя» первым) или, если её нет, «Сделано/Дальше» из файла круга."""
-    p = repo / "vault" / "передачи" / f"{имя}.md"
+    p = база_знаний(repo) / "передачи" / f"{имя}.md"
     if p.exists():
         текст = p.read_text(encoding="utf-8")
         if текст.startswith("---"):
@@ -473,7 +474,7 @@ def передача(repo: Path, имя: str) -> tuple[int, str]:
             части[НЕ_ПОВТОРЯТЬ] = [*строки, *новые]
         порядок = sorted(части, key=lambda k: k != "Ждёт тебя")  # sorted стабилен: остальные в своём порядке
         return 0, "\n\n".join(f"## {k}\n" + "\n".join(части[k]).strip() for k in порядок)
-    файл = repo / "vault" / "круги" / f"{имя}.md"
+    файл = база_знаний(repo) / "круги" / f"{имя}.md"
     if not файл.exists():
         return 1, f"нет ни передачи, ни круга «{имя}»"
     sect, задачи, итог = None, [], []
