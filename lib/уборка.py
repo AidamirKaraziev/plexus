@@ -3,8 +3,10 @@
 
 Дорожку работника заводит встроенный `isolation: "worktree"` Claude Code:
 каталог `.claude/worktrees/<имя>`, ветка `claude/<имя>`. В Codex дорожку заводит
-`lib/дорожка.py`: `.codex/worktrees/<имя>`, ветка `codex/<имя>`. Убирать их некому —
-этим и занят этот скрипт (опознаёт оба префикса). Ветки `worktree-agent-*` тоже опознаются.
+`lib/дорожка.py`: `.codex/worktrees/<имя>`, ветка `codex/<имя>`, в OpenCode —
+`lib/дорожка.py --среда opencode`: `.opencode/worktrees/<имя>`, ветка `opencode/<имя>`.
+Убирать их некому — этим и занят этот скрипт (опознаёт все три префикса). Ветки
+`worktree-agent-*` тоже опознаются.
 
 Сносится только то, что влито в текущую ветку человека (по содержимому: `git cherry`
 пуст — перенос cherry-pick'ом тоже считается) и не имеет несохранённых правок.
@@ -162,6 +164,9 @@ def самопроверка_забрать() -> int:
         # вторая чистая ветка: проверка «забрать одну из двух»
         g("worktree", "add", "-b", "claude/b", str(base / "wb"))
         коммит(base / "wb", "b1", "b\n", "b1")
+        # работник opencode: «+» переносится --забрать
+        g("worktree", "add", "-b", "opencode/o", str(base / "wo"))
+        коммит(base / "wo", "o1", "o\n", "o1")
         # человек правит f и сам забирает m
         коммит(repo, "f", "human\n", "human")
         g("cherry-pick", "claude/m")
@@ -175,6 +180,8 @@ def самопроверка_забрать() -> int:
         r = прогон("--сухой-прогон")
         if r.returncode or g("rev-parse", "HEAD") != голова or "забрал бы: claude/a — коммитов 2" not in r.stdout:
             ошибки.append(f"сухой прогон: {r.stdout}{r.stderr}")
+        if "забрал бы: opencode/o — коммитов 1" not in r.stdout:
+            ошибки.append("ветка opencode/o не в списке переноса")
         if "claude/m" in r.stdout:
             ошибки.append("влитая ветка claude/m в списке переноса")
 
@@ -189,6 +196,12 @@ def самопроверка_забрать() -> int:
             ошибки.append(f"--ветка claude/a: код {r.returncode}: {r.stdout}{r.stderr}")
         if (repo / "b1").exists() or not any(l.startswith("+") for l in g("cherry", "work", "claude/b").splitlines()):
             ошибки.append("--ветка claude/a тронула вторую ветку claude/b")
+
+        r = прогон("--ветка", "opencode/o")
+        if r.returncode or not (repo / "o1").exists() or "забрал: opencode/o" not in r.stdout:
+            ошибки.append(f"--ветка opencode/o: код {r.returncode}: {r.stdout}{r.stderr}")
+        if any(l.startswith("+") for l in g("cherry", "work", "opencode/o").splitlines()):
+            ошибки.append("после переноса у opencode/o остались «+»")
 
         r = прогон("--ветка", "claude/нет")
         if r.returncode != 2 or "claude/нет" not in r.stdout:
@@ -216,7 +229,7 @@ def самопроверка_забрать() -> int:
         if ошибки:
             print("САМОПРОВЕРКА ПРОВАЛЕНА (забрать):", *ошибки, sep="\n")
             return 1
-    print("самопроверка забрать: ок (сухой прогон, перенос, одна из двух, ветки нет, влитая, конфликт)")
+    print("самопроверка забрать: ок (сухой прогон, перенос, opencode, одна из двух, ветки нет, влитая, конфликт)")
     return 0
 
 
@@ -246,6 +259,18 @@ def самопроверка() -> int:
         g("worktree", "add", "-b", "claude/x", str(base / "w2"))
         (base / "w2" / "c").write_text("c\n")
         g("add", ".", cwd=base / "w2"); g("commit", "-m", "c", cwd=base / "w2")
+        # opencode: влитая дорожка (коммит перенесён в work) и невлитая
+        g("worktree", "add", "-b", "opencode/ok", str(base / "w3"))
+        (base / "w3" / "e").write_text("e\n")
+        g("add", ".", cwd=base / "w3"); g("commit", "-m", "e", cwd=base / "w3")
+        # свой коммит в work до переноса — тот же приём, что и выше: иначе cherry-pick
+        # в ту же секунду даёт тот же SHA, и ветка opencode/ok становится предком HEAD
+        (repo / "g").write_text("g\n")
+        g("add", "."); g("commit", "-m", "g")
+        g("cherry-pick", "opencode/ok")
+        g("worktree", "add", "-b", "opencode/no", str(base / "w4"))
+        (base / "w4" / "h").write_text("h\n")
+        g("add", ".", cwd=base / "w4"); g("commit", "-m", "h", cwd=base / "w4")
         # ветки без дорожки: пустая (влита) и с невлитым коммитом
         g("branch", "worktree-agent-old")
         g("branch", "worktree-agent-new", "claude/x")
@@ -256,6 +281,8 @@ def самопроверка() -> int:
         ожидание = [
             "снёс бы: w1 · worktree-agent-abc",
             "оставил: w2 · claude/x — не влита в work",
+            "снёс бы: w3 · opencode/ok",
+            "оставил: w4 · opencode/no — не влита в work",
             "снёс бы: — · worktree-agent-old (ветка без дорожки)",
             "оставил: — · worktree-agent-new — не влита в work",
         ]
@@ -272,23 +299,23 @@ def самопроверка() -> int:
         ветки = set(g("branch", "--format=%(refname:short)").splitlines())
         if r.returncode or "сбой" in r.stdout:
             ошибки.append("уборка упала или дала сбой")
-        if ветки & {"worktree-agent-abc", "worktree-agent-old"}:
+        if ветки & {"worktree-agent-abc", "worktree-agent-old", "opencode/ok"}:
             ошибки.append(f"влитые ветки остались: {sorted(ветки)}")
-        if not {"claude/x", "worktree-agent-new"} <= ветки:
+        if not {"claude/x", "worktree-agent-new", "opencode/no"} <= ветки:
             ошибки.append(f"невлитые ветки снесены: {sorted(ветки)}")
-        if (base / "w1").exists() or not (base / "w2").exists():
-            ошибки.append("дорожки w1/w2 не в том состоянии")
+        if (base / "w1").exists() or (base / "w3").exists() or not (base / "w2").exists() or not (base / "w4").exists():
+            ошибки.append("дорожки w1–w4 не в том состоянии")
         if ошибки:
             print("САМОПРОВЕРКА ПРОВАЛЕНА:", *ошибки, r.stdout, r.stderr, sep="\n")
             return 1
-    print("самопроверка: ок (4 случая сухим прогоном + настоящий прогон)")
+    print("самопроверка: ок (6 случаев сухим прогоном + настоящий прогон)")
     return самопроверка_забрать()
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(add_help=True)
     ap.add_argument("--сухой-прогон", action="store_true", help="только показать, ничего не трогать")
-    ap.add_argument("--префикс", action="append", help="префикс веток работников (по умолчанию claude/, codex/ и worktree-agent-)")
+    ap.add_argument("--префикс", action="append", help="префикс веток работников (по умолчанию claude/, codex/, opencode/ и worktree-agent-)")
     ap.add_argument("--забрать", action="store_true", help="перенести коммиты «+» веток работников в ветку человека")
     ap.add_argument("--ветка", help="с --забрать: забрать только эту ветку работника")
     ap.add_argument("--репозиторий", default=".")
@@ -297,7 +324,7 @@ def main() -> int:
     if getattr(a, "самопроверка"):
         return самопроверка()
     сухой = getattr(a, "сухой_прогон")
-    префиксы = tuple(a.префикс or ["claude/", "codex/", "worktree-agent-"])
+    префиксы = tuple(a.префикс or ["claude/", "codex/", "opencode/", "worktree-agent-"])
 
     root = main_root(Path(a.репозиторий).resolve())
     if a.ветка and not getattr(a, "забрать"):

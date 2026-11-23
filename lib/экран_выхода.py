@@ -7,7 +7,7 @@
     python3 ${CLAUDE_PLUGIN_ROOT}/lib/экран_выхода.py --чеклист <круг> [--repo .]
     python3 ${CLAUDE_PLUGIN_ROOT}/lib/экран_выхода.py --передача <круг> --из <черновик.md>
     python3 ${CLAUDE_PLUGIN_ROOT}/lib/экран_выхода.py --закрыть <круг>
-    python3 ${CLAUDE_PLUGIN_ROOT}/lib/экран_выхода.py --журнал <круг> --статус закрыт|пауза
+    python3 ${CLAUDE_PLUGIN_ROOT}/lib/экран_выхода.py --журнал <круг> --статус закрыт|пауза [--сессия <id>]
     python3 ${CLAUDE_PLUGIN_ROOT}/lib/экран_выхода.py --вливание <круг> [--да]
     python3 ${CLAUDE_PLUGIN_ROOT}/lib/экран_выхода.py --самопроверка
 
@@ -22,12 +22,15 @@
 --передача: переписывает vault/передачи/<круг>.md целиком; разделы только из списка,
 в порядке списка, пустые не пишутся, в разделе не больше 5 строк.
 --закрыть: только когда все задачи ✓; удаляет передачу, переносит круг в vault/круги/архив/.
---журнал: строка в .claude/ledger.jsonl (кто — git config user.name).
+--журнал: строка в .claude/ledger.jsonl (кто — git config user.name). Поле session — из
+--сессия (OpenCode: строка контекста «сессия Плексуса: …»), иначе из DSH_SESSION_ID, который
+DSH кладёт в окружение каждого вызова bash (`session-<uuid>` → uuid, как ключ spend.py).
 
 Коды: 0 — готово; 1 — неверный вызов; 2 — отказ с причиной (ничего не тронуто).
 """
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -189,7 +192,7 @@ def закрыть(repo: Path, имя: str) -> tuple[int, str]:
     return 0, f"круг «{имя}» закрыт: в vault/круги/архив/, передача удалена"
 
 
-def журнал(repo: Path, имя: str, статус: str) -> tuple[int, str]:
+def журнал(repo: Path, имя: str, статус: str, сессия: str | None = None) -> tuple[int, str]:
     c, _, why = открыть(repo, имя)
     if not c:
         return 2, why
@@ -203,6 +206,9 @@ def журнал(repo: Path, имя: str, статус: str) -> tuple[int, str]:
               "status": статус, "branch": git(repo, "rev-parse", "--abbrev-ref", "HEAD") or "—",
               "задач": len(c["tasks"]), "ok": sum(t["done"] for t in c["tasks"]),
               "кто": кто(repo), "commits": []}
+    сессия = (сессия or os.environ.get("DSH_SESSION_ID") or "").strip().removeprefix("session-")
+    if сессия:
+        строка["session"] = сессия
     путь = repo / ".claude" / "ledger.jsonl"
     путь.parent.mkdir(parents=True, exist_ok=True)
     with open(путь, "a", encoding="utf-8") as f:
@@ -322,6 +328,22 @@ def самопроверка() -> int:
                 {"круг": "рабочий", "epic": "E01", "area": "skills", "status": "пауза",
                  "задач": 2, "ok": 1, "кто": "Тест", "commits": []})
         сверить("журнал: ветка и дата", (z["branch"], z["date"]), ("main", date.today().isoformat()))
+        было = os.environ.pop("DSH_SESSION_ID", None)
+        try:
+            журнал(repo, "рабочий", "пауза")
+            z = json.loads((repo / ".claude" / "ledger.jsonl").read_text(encoding="utf-8").splitlines()[-1])
+            сверить("журнал: без сессии поля нет", "session" in z, False)
+            os.environ["DSH_SESSION_ID"] = "session-f4b7b0f0-dfe5-41cd-a1b8-e41329ade785"
+            журнал(repo, "рабочий", "пауза")
+            z = json.loads((repo / ".claude" / "ledger.jsonl").read_text(encoding="utf-8").splitlines()[-1])
+            сверить("журнал: session из DSH_SESSION_ID", z.get("session"), "f4b7b0f0-dfe5-41cd-a1b8-e41329ade785")
+            журнал(repo, "рабочий", "пауза", "ses_opencode1")
+            z = json.loads((repo / ".claude" / "ledger.jsonl").read_text(encoding="utf-8").splitlines()[-1])
+            сверить("журнал: --сессия важнее окружения", z.get("session"), "ses_opencode1")
+        finally:
+            os.environ.pop("DSH_SESSION_ID", None)
+            if было is not None:
+                os.environ["DSH_SESSION_ID"] = было
 
         # закрыть
         код, текст = закрыть(repo, "рабочий")
@@ -383,6 +405,7 @@ def main() -> int:
     ap.add_argument("--вливание", metavar="КРУГ")
     ap.add_argument("--да", action="store_true")
     ap.add_argument("--статус", choices=["закрыт", "пауза"])
+    ap.add_argument("--сессия", metavar="ID", help="id сессии в поле session (по умолчанию DSH_SESSION_ID)")
     try:
         args = ap.parse_args()
     except SystemExit as e:
@@ -412,7 +435,7 @@ def main() -> int:
     elif args.вливание:
         код, текст = вливание(repo, args.вливание, args.да)
     else:
-        код, текст = журнал(repo, args.журнал, args.статус)
+        код, текст = журнал(repo, args.журнал, args.статус, args.сессия)
     print(текст)
     return код
 
