@@ -3,6 +3,10 @@
 Версия набора — в `VERSION`. У каждого скилла своя `version:` во фронтматтере.
 Откат одного скилла, не трогая остальные: `git checkout v1.0.0 -- stage-end/`.
 
+## 2.10.5 — 2026-11-25
+
+- Бандл DSH bundles/plexus-workers объявляет совместимость engines.dsh 0.2.2-rc.5 — нужно для индекса маркета DSH
+
 ## 2.10.4 — 2026-11-25
 
 - Бандл DSH bundles/plexus-workers — пресеты работников plexus-programmer и plexus-analyst для DeepSeek Harness
