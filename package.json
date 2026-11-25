@@ -1,0 +1,19 @@
+{
+  "name": "plexus",
+  "version": "2.11.1",
+  "type": "module",
+  "description": "Плексус: координация работы — человек утверждает задание, менеджер раздаёт задачи работникам, отчёты сходятся обратно",
+  "exports": {
+    ".": "./.opencode-plugin/index.ts"
+  },
+  "files": [
+    "skills",
+    "agents",
+    "lib",
+    ".opencode-plugin",
+    "CHANGELOG.md"
+  ],
+  "dependencies": {
+    "@opencode/plugin": "2.3.2"
+  }
+}

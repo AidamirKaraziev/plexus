@@ -1,16 +1,16 @@
 # Плексус
 
-Плагин для Claude Code: человек утверждает задание, менеджер раздаёт задачи работникам, отчёты сходятся обратно. Плюс база знаний проекта и план работ.
+Плагин для Claude Code, Codex и DeepSeek Harness: человек утверждает задание, менеджер раздаёт задачи работникам, отчёты сходятся обратно. Плюс база знаний проекта и план работ.
 
 ## Поставить
 
-В сессии Claude Code одной строкой:
+| Хост | Установка (из терминала) | Вход |
+|---|---|---|
+| Claude Code | `claude plugin marketplace add AidamirKaraziev/plexus && claude plugin install plexus@plexus` | `/plexus:start` |
+| Codex | `codex plugin marketplace add AidamirKaraziev/plexus && codex plugin add plexus@plexus` | `$plexus:start` |
+| DeepSeek Harness | `dsh plugin --profile <профиль> add @plexus-dsh/plexus` (или в DSH Desktop: Plugins → Install `@plexus-dsh/plexus`) — с версии 2.11.0 | `/plexus-start` |
 
-```
-/plugin marketplace add AidamirKaraziev/plexus
-```
-
-затем `/plugin install plexus@plexus`. Вход в работу — `/plexus:start`, шпаргалка — `/plexus:help`.
+В сессии Claude Code то же самое: `/plugin marketplace add AidamirKaraziev/plexus`, затем `/plugin install plexus@plexus`. Шпаргалка — `/plexus:help`. Подробности по хостам — ниже.
 
 ## Codex
 
@@ -36,6 +36,12 @@ codex plugin marketplace upgrade plexus
 ```
 
 Чего пока нет: расход по журналам Codex (итог круга показывает «—») и автоподсказки об обновлении, поэтому обновляйте командой выше.
+
+## DeepSeek Harness (DSH)
+
+Плексус для DSH — npm-пакет `@plexus-dsh/plexus`: скиллы `/plexus-*` и работники plexus-programmer, plexus-analyst. Пакет в npm с версии 2.11.0.
+
+Вход — `/plexus-start` (в DSH имя скилла только через дефис: `/plexus-end`, `/plexus-status`, …).
 
 ## Подключить в проект
 

@@ -29,6 +29,10 @@
 `--ветка <имя>` (только вместе с `--забрать`): переносит коммиты «+» одной этой ветки, остальные
 не трогает; работает и с `--сухой-прогон`. Ветки нет → код 2 с причиной. Без `--ветка` забираются
 все ветки работников (страховка для `/plexus:end`).
+
+Ветка человека — ветка той папки, откуда вызван скрипт (или `--репозиторий`): основной checkout
+или связанная worktree-папка человека (например `../plexus-e37`). Только если эта папка сама —
+дорожка работника (её ветка с префиксом работника), корнем берётся основной checkout.
 """
 import argparse
 import subprocess
@@ -40,6 +44,16 @@ def main_root(start: Path) -> Path:
     """Корень main-checkout'а — первая строка `git worktree list`, даже изнутри дорожки."""
     r = subprocess.run(["git", "worktree", "list", "--porcelain"], cwd=start, capture_output=True, text=True)
     return Path(r.stdout.splitlines()[0].split(" ", 1)[1])
+
+
+def корень_человека(start: Path, префиксы: tuple) -> Path:
+    """Папка, где работает человек: верх рабочей копии `start`; из дорожки работника — основной checkout."""
+    r = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=start, capture_output=True, text=True)
+    if r.returncode:
+        return main_root(start)
+    верх = Path(r.stdout.strip()).resolve()
+    ветка = git("branch", "--show-current", cwd=верх, check=False)
+    return main_root(start) if ветка.startswith(префиксы) else верх
 
 
 def git(*args, cwd, check=True) -> str:
@@ -65,7 +79,7 @@ def дорожки(root: Path) -> list[dict]:
 
 
 def ветка_человека(root: Path) -> str:
-    """Текущая ветка main-checkout'а; при detached HEAD — HEAD."""
+    """Текущая ветка папки человека; при detached HEAD — HEAD."""
     return git("branch", "--show-current", cwd=root, check=False) or "HEAD"
 
 
@@ -229,8 +243,61 @@ def самопроверка_забрать() -> int:
         if ошибки:
             print("САМОПРОВЕРКА ПРОВАЛЕНА (забрать):", *ошибки, sep="\n")
             return 1
-    print("самопроверка забрать: ок (сухой прогон, перенос, opencode, одна из двух, ветки нет, влитая, конфликт)")
+    ошибки = самопроверка_связанная_папка()
+    if ошибки:
+        print("САМОПРОВЕРКА ПРОВАЛЕНА (человек в связанной worktree):", *ошибки, sep="\n")
+        return 1
+    print("самопроверка забрать: ок (сухой прогон, перенос, opencode, одна из двух, ветки нет, влитая, конфликт,"
+          " человек в связанной worktree)")
     return 0
+
+
+def самопроверка_связанная_папка() -> list[str]:
+    """Человек в связанной worktree-папке на своей ветке: забирать туда, «+» считать против неё."""
+    import tempfile
+    ошибки = []
+    with tempfile.TemporaryDirectory() as tmp:
+        base = Path(tmp).resolve()
+        main, папка = base / "main", base / "e37"
+        main.mkdir()
+
+        def g(*args, cwd=main):
+            return git(*args, cwd=cwd)
+
+        def коммит(cwd, файл, текст, msg):
+            (cwd / файл).write_text(текст)
+            g("add", ".", cwd=cwd); g("commit", "-m", msg, cwd=cwd)
+
+        g("init", "-b", "work")
+        коммит(main, "f", "0\n", "base")
+        # человек ведёт эпик в отдельной папке на своей ветке, со своим коммитом сверх work
+        g("worktree", "add", "-b", "e37", str(папка))
+        коммит(папка, "e", "e\n", "e37 свой")
+        # работник ответвился от e37 и сделал один коммит
+        g("worktree", "add", "-b", "claude/w", str(base / "ww"), "e37")
+        коммит(base / "ww", "w1", "w\n", "w1")
+        # незакоммиченная правка в основной папке — её не трогать
+        (main / "f").write_text("правка\n")
+        голова_main, голова_e37 = g("rev-parse", "HEAD"), g("rev-parse", "e37")
+
+        def прогон(*флаги, cwd):
+            return subprocess.run([sys.executable, __file__, "--забрать", "--ветка", "claude/w", *флаги],
+                                  cwd=cwd, capture_output=True, text=True)
+
+        r = прогон("--сухой-прогон", "--репозиторий", str(папка), cwd=main)
+        if r.returncode or f"{папка} → e37" not in r.stdout or "забрал бы: claude/w — коммитов 1" not in r.stdout:
+            ошибки.append(f"сухой прогон из связанной папки: {r.stdout}{r.stderr}")
+        r = прогон("--сухой-прогон", "--репозиторий", str(base / "ww"), cwd=main)
+        if r.returncode or f"{main} → work" not in r.stdout:
+            ошибки.append(f"из дорожки работника корень не основной checkout: {r.stdout}{r.stderr}")
+        r = прогон(cwd=папка)
+        if r.returncode or "забрал: claude/w — коммитов 1" not in r.stdout or not (папка / "w1").exists():
+            ошибки.append(f"перенос из связанной папки: код {r.returncode}: {r.stdout}{r.stderr}")
+        if g("rev-parse", "e37~1") != голова_e37 or any(l.startswith("+") for l in g("cherry", "e37", "claude/w").splitlines()):
+            ошибки.append("коммит работника не лёг в e37 ровно одним коммитом")
+        if g("rev-parse", "HEAD") != голова_main or (main / "w1").exists() or (main / "f").read_text() != "правка\n":
+            ошибки.append("основной checkout тронут: HEAD, файлы или незакоммиченная правка")
+    return ошибки
 
 
 def самопроверка() -> int:
@@ -326,7 +393,7 @@ def main() -> int:
     сухой = getattr(a, "сухой_прогон")
     префиксы = tuple(a.префикс or ["claude/", "codex/", "opencode/", "worktree-agent-"])
 
-    root = main_root(Path(a.репозиторий).resolve())
+    root = корень_человека(Path(a.репозиторий).resolve(), префиксы)
     if a.ветка and not getattr(a, "забрать"):
         ap.error("--ветка работает только вместе с --забрать")
     if getattr(a, "забрать"):

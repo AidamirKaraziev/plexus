@@ -7,6 +7,8 @@ version: 1.4.0
 # The plan: epics and stages
 
 Корень Плексуса — `${CLAUDE_PLUGIN_ROOT}`; в Codex и OpenCode не раскрывается — бери путь из строки контекста «корень Плексуса: …», а если её нет — папку на два уровня выше этого SKILL.md.
+Язык — по `${CLAUDE_PLUGIN_ROOT}/lib/язык/правила.md`: этапы, «готово, когда» и вопросы человеку — полный уровень, остальное — облегчённый.
+
 
 The plan files are the single source of truth about what is left to do. By
 default this skill reads neither the project code nor the knowledge vault.

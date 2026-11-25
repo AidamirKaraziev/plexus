@@ -1,0 +1,29 @@
+# Проверка доставки: плагин ставится во временные профили Claude Code, Codex и DSH.
+# Секреты не нужны и не используются.
+# DSH: приложения DSH на Linux нет, CLI dsh не найдётся. Проверка честно пишет
+# ПРОПУСК и проверяет упаковку пакета DSH; без --строго это не провал.
+name: доставка
+
+on:
+  pull_request:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  доставка:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Поставить CLI Claude Code и Codex
+        run: npm install -g @anthropic-ai/claude-code @openai/codex
+      - name: Собрать пакеты и проверить упаковку
+        run: node доставка/собрать.mjs версия --проверить
+      - name: Проверить доставку
+        run: bash проверить-доставку.sh
