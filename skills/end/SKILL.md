@@ -7,6 +7,8 @@ version: 2.1.0
 # Закрыть — одна дверь из работы
 
 Корень Плексуса — `${CLAUDE_PLUGIN_ROOT}`; в Codex и OpenCode не раскрывается, а в bash DSH пуст (скиллы подключены через customSkillDirs) — бери путь из строки контекста «корень Плексуса: …», в DSH — из строки «Base directory for this skill: <путь>», а если её нет — папку на два уровня выше этого SKILL.md.
+Язык — по `${CLAUDE_PLUGIN_ROOT}/lib/язык/правила.md`: итог сессии и передача — полный уровень, остальное — облегчённый.
+
 
 Speak Russian to the user throughout. Скрипты — в `${CLAUDE_PLUGIN_ROOT}/lib/`.
 
