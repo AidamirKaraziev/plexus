@@ -1,0 +1,12 @@
+{
+  "name": "plexus-workers",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Пресеты DSH с работниками Плексуса: plexus-programmer и plexus-analyst (этап E05-S04 cortex_harness).",
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "cordis.patch.yml"
+    }
+  }
+}

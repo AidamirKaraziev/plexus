@@ -1,0 +1,131 @@
+# Бандл plexus-workers (этап E05-S04 cortex_harness): пресеты DSH с работниками
+# Плексуса — programmer и analyst. Брифы по agents/programmer.md, agents/analyst.md
+# и правилу возврата из SKILL.md: ровно 4 строки.
+# Строка пресета в DSH 0.2.2-rc.5 модель НЕ пинит (модель выбирается при создании
+# сессии или строкой agent-default-model профиля) — рабочая модель прописана
+# в description и в дым/headless-programmer.patch.yml.
+# Обе строки — вставки в конец состава профиля; умолчание профиля не меняют
+# (пресет по умолчанию остаётся standard). Скиллы работникам не даём: круги
+# ведёт ведущая сессия, работник получает одну задачу и файлы к ней.
+- insert:
+    - id: preset-plexus-programmer
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: plexus-programmer
+        name: Программист Плексуса
+        order: 10
+        description: >-
+          Работник Плексуса programmer: одна задача по названным файлам, коммит
+          в свою ветку, не в main; отчёт ровно 4 строками: ветка, сделал, не смог,
+          проверка. Инструменты: bash, файлы на запись, поиск. Модель: glm-5.3 —
+          выбери её при создании сессии, строка пресета модель не пинит.
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              complete: true
+              includeRuntimeContext: false
+              prefix: |
+                Ты — работник Плексуса «программист» (programmer), работаешь на модели {{model}}. Тебе дают одну задачу с перечнем файлов.
+                Правила:
+                — правь только файлы, названные в задаче; остальное не трогай;
+                — неясно, что делать — остановись и спроси, не додумывай;
+                — коммить в свою ветку, не в main; не пушь;
+                — команду проверки запусти сам и приведи её код выхода.
+                Отчёт — ровно 4 строки, без ничего лишнего:
+                ветка: <ветка, в которой работа; нет репозитория — прочерк>
+                сделал: <что сделал, одной строкой>
+                не смог: <что не вышло; всё вышло — «пусто»>
+                проверка: <команда проверки и её код выхода>
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'
+            disabled: !!js process.platform === 'win32'
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+            config:
+              read: true
+              readImage: true
+              write: true
+              edit: true
+              applyPatch: false
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+              toolResultPruner: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+              - id: command-compact
+                name: '@deepseek-ai/dsh-command-compact'
+              - id: tool-result-pruner
+                name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+                config:
+                  thresholdChars: 8192
+                  headChars: 4096
+                  tailChars: 1024
+    - id: preset-plexus-analyst
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: plexus-analyst
+        name: Аналитик Плексуса
+        order: 11
+        description: >-
+          Работник Плексуса analyst: разбор готового свода аналитики, только
+          чтение (файлы, поиск, команды без правок); предложение ровно 4 строками:
+          наблюдение, доказательство, предложение, куда именно. Модель: glm-5.3 —
+          выбери её при создании сессии, строка пресета модель не пинит.
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              complete: true
+              includeRuntimeContext: false
+              prefix: |
+                Ты — работник Плексуса «аналитик» (analyst), работаешь на модели {{model}}. Тебе дают свод аналитики или транскрипты сессий.
+                Правила:
+                — работай по готовому своду, сам код не разбираешь;
+                — только чтение: файлы, поиск, команды без правок;
+                — скиллы не правишь, ничего не коммитишь.
+                Верни предложение — ровно 4 строки, без ничего лишнего:
+                наблюдение: <что заметил>
+                доказательство: <чем подтверждаешь: счётчик встреч из свода>
+                предложение: <какая правка, коротко>
+                куда именно: <файл и место правки>
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'
+            disabled: !!js process.platform === 'win32'
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+            config:
+              read: true
+              readImage: true
+              write: false
+              edit: false
+              applyPatch: false
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+              toolResultPruner: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+              - id: command-compact
+                name: '@deepseek-ai/dsh-command-compact'
+              - id: tool-result-pruner
+                name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+                config:
+                  thresholdChars: 8192
+                  headChars: 4096
+                  tailChars: 1024
