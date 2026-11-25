@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "description": "Пресеты DSH с работниками Плексуса: plexus-programmer и plexus-analyst (этап E05-S04 cortex_harness).",
+  "engines": {
+    "dsh": "0.2.2-rc.5"
+  },
   "dsh": {
     "manifestVersion": 1,
     "bundle": {
